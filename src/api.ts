@@ -22,7 +22,7 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10) 
   const startStr = startDate.toISOString().split('T')[0];
   const endStr = endDate.toISOString().split('T')[0];
 
-  const cacheKey = `weather_v2_${lat.toFixed(3)}_${lon.toFixed(3)}_${years}_${endStr}`;
+  const cacheKey = `weather_v3_${lat.toFixed(3)}_${lon.toFixed(3)}_${years}_${endStr}`;
   let weatherData = await get(cacheKey);
   let isCached = true;
 
@@ -129,7 +129,7 @@ function applySpells(dataset: any[]) {
 }
 
 function aggregateByDayOfYear(weatherData: any) {
-  const { time, temperature_2m_max, temperature_2m_min, temperature_2m_mean, precipitation_sum, wind_speed_10m_max } = weatherData.daily;
+  const { time, temperature_2m_max, temperature_2m_min, temperature_2m_mean, precipitation_sum, wind_speed_10m_max, wind_gusts_10m_max } = weatherData.daily;
   const { temperature_2m, relative_humidity_2m, pm2_5 } = weatherData.hourly;
 
   const pm25Hourly = pm2_5 || [];
@@ -215,7 +215,8 @@ function aggregateByDayOfYear(weatherData: any) {
       entry.tMaxSum += temperature_2m_max[i];
       entry.tMinSum += temperature_2m_min[i];
       entry.precipSum += precipitation_sum[i];
-      entry.windSum += wind_speed_10m_max[i];
+      const maxWind = Math.max(wind_speed_10m_max[i], (wind_gusts_10m_max && wind_gusts_10m_max[i]) ? wind_gusts_10m_max[i] : 0);
+      entry.windSum += maxWind;
       entry.twSum += dailyTw[i];
       entry.twMaxSum += dailyTwMax[i];
       entry.twMinSum += dailyTwMin[i];
@@ -230,7 +231,7 @@ function aggregateByDayOfYear(weatherData: any) {
       yearEntry.tMaxSum += temperature_2m_max[i];
       yearEntry.tMinSum += temperature_2m_min[i];
       yearEntry.precipSum += precipitation_sum[i];
-      yearEntry.windSum += wind_speed_10m_max[i];
+      yearEntry.windSum += Math.max(wind_speed_10m_max[i], (wind_gusts_10m_max && wind_gusts_10m_max[i]) ? wind_gusts_10m_max[i] : 0);
       yearEntry.twSum += dailyTw[i];
       yearEntry.twMaxSum += dailyTwMax[i];
       yearEntry.twMinSum += dailyTwMin[i];

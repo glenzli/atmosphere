@@ -93,11 +93,20 @@ export function evaluateLivability(
   score -= (dryPenalty + dampPenalty);
   
   // E. 降雨极端天气
-  if (precipAvg >= 50) { score -= 60; isExtreme = true; } // 暴雨
+  if (precipAvg >= 50) { score -= 60; isExtreme = true; } // 暴雨 (极度影响出行，一票否决)
   else if (precipAvg >= 20) score -= 25; // 大雨
   else if (precipAvg >= 10) score -= 10; // 中雨
   
-  // F. PM2.5 惩罚 (基于中国环境空气质量标准)
+  // F. 台风/极端大风灾害 (基于 km/h)
+  let windPenalty = 0;
+  if (windMax >= 118) { windPenalty = 80; } // 台风/飓风级别 (>= 12级)
+  else if (windMax >= 88) { windPenalty = 50; } // 狂风 (10-11级，树木倒伏危险)
+  else if (windMax >= 62) { windPenalty = 20; } // 烈风 (8-9级，举步维艰)
+  
+  if (windPenalty >= 50) isExtreme = true; // 狂风及以上一票否决
+  score -= windPenalty;
+  
+  // G. PM2.5 惩罚 (基于中国环境空气质量标准)
   let pmPenalty = 0;
   if (PM25 > 150) { pmPenalty = 60; } // 重度/严重污染 
   else if (PM25 > 115) { pmPenalty = 40; } // 中度污染 

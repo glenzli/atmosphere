@@ -64,6 +64,19 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
     const rhMin = data.map(d => d.rhMin || 0);
     const rhDiff = data.map(d => Number(((d.rhMax || 0) - (d.rhMin || 0)).toFixed(1)));
 
+    const scatterTyphoon: [number, number][] = [];
+    const scatterRainstorm: [number, number][] = [];
+    const scatterSevereHeat: [number, number][] = [];
+    const scatterSevereCold: [number, number][] = [];
+
+    data.forEach((d, i) => {
+      if (d.windAvg >= 62) scatterTyphoon.push([i, 3]);
+      if (d.precipAvg >= 50) scatterRainstorm.push([i, 2]);
+      if (d.tMax >= 38 || d.twMax >= 28) scatterSevereHeat.push([i, 1]);
+      if ((d.tAvg <= 5 && d.rhAvg >= 80) || d.tMin <= -5) scatterSevereCold.push([i, 0]);
+    });
+
+
     const markAreas = [];
     let currentSeason = data[0].season;
     let currentStart = data[0].date;
@@ -144,25 +157,31 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
         {
           text: '💧 相对湿度 (干湿波动极限与连续气象期)',
           left: '4%',
-          top: '49%',
+          top: '47%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
         },
         {
           text: '🌧️ 降水量 (自动识别梅雨/汛期)',
           left: '4%',
-          top: '64%',
+          top: '60%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
         },
         {
           text: '😷 空气质量 (PM2.5 历史真实浓度)',
           left: '4%',
-          top: '77%',
+          top: '71%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
+        },
+        {
+          text: '🚨 极端组合灾害追踪 (横向: 天数 / 纵向: 灾害种类重叠)',
+          left: '4%',
+          top: '84%',
+          textStyle: { fontSize: 13, color: '#ef4444', fontWeight: 'bold' }
         },
         {
           text: '🏡 宜居综合评估条带',
           left: '4%',
-          top: '91%',
+          top: '94%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
         }
       ],
@@ -187,6 +206,18 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
 
           if (pointData.isRainySeason) {
             html += `<span style="color:#0284c7;font-weight:bold">🌧️ 处于集中降雨季 (汛期/梅雨期)</span><br/>`;
+          }
+
+          const disasters = [];
+          if (pointData.windAvg >= 62) disasters.push('🌪️ 大风预警');
+          if (pointData.precipAvg >= 50) disasters.push('🌧️ 暴雨预警');
+          if (pointData.tMax >= 38 || pointData.twMax >= 28) disasters.push('🌡️ 高温预警');
+          if ((pointData.tAvg <= 5 && pointData.rhAvg >= 80) || pointData.tMin <= -5) disasters.push('❄️ 寒冷预警');
+
+          if (disasters.length > 0) {
+            html += `<div style="margin-top:4px;padding-top:4px;border-top:1px dashed #cbd5e1;color:#ef4444;font-weight:bold">
+              🚨 灾害触发: ${disasters.join(' | ')}
+            </div>`;
           }
 
           if (pointData.livability) {
@@ -278,12 +309,13 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
         link: [{ xAxisIndex: 'all' }]
       },
       grid: [
-        { left: '4%', right: '4%', top: '4%', height: '22%' },    // Grid 0: Dry Bulb
-        { left: '4%', right: '4%', top: '29%', height: '20%' },   // Grid 1: Wet Bulb
-        { left: '4%', right: '4%', top: '52%', height: '12%' },   // Grid 2: Humidity
-        { left: '4%', right: '4%', top: '67%', height: '10%' },   // Grid 3: Precip
-        { left: '4%', right: '4%', top: '80%', height: '10%' },   // Grid 4: PM2.5
-        { left: '4%', right: '4%', top: '94%', height: '4%' }     // Grid 5: Livability
+        { left: '4%', right: '4%', top: '4%', height: '22%' },
+        { left: '4%', right: '4%', top: '29%', height: '18%' },
+        { left: '4%', right: '4%', top: '50%', height: '10%' },
+        { left: '4%', right: '4%', top: '63%', height: '8%' },
+        { left: '4%', right: '4%', top: '74%', height: '7%' },
+        { left: '4%', right: '4%', top: '96%', height: '3%' },     // Grid 5: Livability
+        { left: '4%', right: '4%', top: '88%', height: '5%' }      // Grid 6: Disaster
       ],
       xAxis: [
         { type: 'category', data: dates, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
@@ -291,7 +323,8 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
         { type: 'category', data: dates, gridIndex: 2, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 3, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 4, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
-        { type: 'category', data: dates, gridIndex: 5, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { color: '#64748b' } }
+        { type: 'category', data: dates, gridIndex: 5, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { color: '#64748b' } },
+        { type: 'category', data: dates, gridIndex: 6, show: false }
       ],
       yAxis: [
         { type: 'value', gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
@@ -299,7 +332,28 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
         { type: 'value', gridIndex: 2, max: 100, min: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
         { type: 'value', gridIndex: 3, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
         { type: 'value', gridIndex: 4, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
-        { type: 'value', gridIndex: 5, show: false, max: 1 }
+        { type: 'value', gridIndex: 5, show: false, max: 1 },
+        { 
+          type: 'value', 
+          gridIndex: 6, 
+          min: -0.5, 
+          max: 3.5, 
+          splitLine: { show: true, lineStyle: { type: 'dashed', color: '#f1f5f9' } },
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisLabel: {
+            formatter: (val: number) => {
+              if (val === 0) return '❄️ 寒冷预警';
+              if (val === 1) return '🌡️ 高温预警';
+              if (val === 2) return '🌧️ 暴雨预警';
+              if (val === 3) return '🌪️ 大风预警';
+              return '';
+            },
+            color: '#64748b',
+            fontSize: 10,
+            margin: 2
+          }
+        }
       ],
       series: [
         // Grid 0: Dry Bulb Track
@@ -404,6 +458,23 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
             value: 1, itemStyle: { color: d.livability ? d.livability.color : '#e2e8f0' }
           })),
           barWidth: '100%', barCategoryGap: '0%'
+        },
+        // Grid 6: Disaster Scatter
+        {
+          name: '严寒', type: 'scatter', xAxisIndex: 6, yAxisIndex: 6,
+          data: scatterSevereCold, symbolSize: 6, itemStyle: { color: '#0ea5e9' }
+        },
+        {
+          name: '酷暑', type: 'scatter', xAxisIndex: 6, yAxisIndex: 6,
+          data: scatterSevereHeat, symbolSize: 6, itemStyle: { color: '#ef4444' }
+        },
+        {
+          name: '暴雨', type: 'scatter', xAxisIndex: 6, yAxisIndex: 6,
+          data: scatterRainstorm, symbolSize: 6, itemStyle: { color: '#1d4ed8' }
+        },
+        {
+          name: '台风', type: 'scatter', xAxisIndex: 6, yAxisIndex: 6,
+          data: scatterTyphoon, symbolSize: 6, itemStyle: { color: '#8b5cf6' }
         }
       ]
     };

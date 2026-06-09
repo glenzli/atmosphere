@@ -86,7 +86,7 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
         textStyle: { color: '#0f172a' }
       },
       legend: [
-        { data: ['春季', '夏季', '秋季', '冬季', '酷夏(高温)', '严冬(冰点)'], top: '6%', right: '4%' },
+        { data: ['春季', '夏季', '秋季', '冬季', '高温预警', '寒冷预警'], top: '6%', right: '4%' },
         { data: ['极度舒适', '尚可接受', '全年宜居期', '较不宜居', '极端恶劣', '全年恶劣期'], top: '53%', right: '4%', type: 'scroll', width: '60%' }
       ],
       grid: [
@@ -108,8 +108,8 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
         { name: '秋季', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.autumn, itemStyle: { color: '#f59e0b' }, smooth: true, symbolSize: 6 },
         { name: '冬季', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.winter, itemStyle: { color: '#3b82f6' }, smooth: true, symbolSize: 6 },
         
-        { name: '酷夏(高温)', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeSummer, itemStyle: { color: '#991b1b' }, areaStyle: { color: 'rgba(153, 27, 27, 0.2)' }, smooth: true, symbol: 'none' },
-        { name: '严冬(冰点)', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeWinter, itemStyle: { color: '#1e3a8a' }, areaStyle: { color: 'rgba(30, 58, 138, 0.2)' }, smooth: true, symbol: 'none' },
+        { name: '高温预警', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeSummer, itemStyle: { color: '#991b1b' }, areaStyle: { color: 'rgba(153, 27, 27, 0.2)' }, smooth: true, symbol: 'none' },
+        { name: '寒冷预警', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeWinter, itemStyle: { color: '#1e3a8a' }, areaStyle: { color: 'rgba(30, 58, 138, 0.2)' }, smooth: true, symbol: 'none' },
 
         // Grid 1: Livability (Stacked Area for better structural perception)
         { name: '极度舒适', type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level1, itemStyle: { color: '#10b981' }, barMaxWidth: 40 },

@@ -21,6 +21,12 @@ export default function App() {
   const [cachedCities, setCachedCities] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('cached_cities') || '[]'); } catch { return []; }
   });
+  const [recentCities, setRecentCities] = useState<string[]>(() => {
+    try { 
+      const saved = localStorage.getItem('recent_cities');
+      return saved ? JSON.parse(saved) : ['深圳', '北京', '海口', '昆明']; 
+    } catch { return []; }
+  });
 
   // Whenever preference changes, re-apply it to dataMap and compareCities
   React.useEffect(() => {
@@ -37,7 +43,11 @@ export default function App() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!city.trim()) return;
+    await executeSearch(city);
+  };
+
+  const executeSearch = async (searchCity: string) => {
+    if (!searchCity.trim()) return;
 
     setLoading(true);
     setError(null);
@@ -46,10 +56,19 @@ export default function App() {
     setSelectedYear('');
 
     try {
-      const geo = await geocodeCity(city);
+      const geo = await geocodeCity(searchCity);
+      // Override the geocoded name with the user's original input so it doesn't flip to English
+      geo.name = searchCity;
       setCityInfo(geo);
+      setCity(searchCity);
       
-      if (cachedCities.includes(geo.name)) {
+      setRecentCities(prev => {
+        const next = [searchCity, ...prev.filter(c => c !== searchCity)].slice(0, 8);
+        localStorage.setItem('recent_cities', JSON.stringify(next));
+        return next;
+      });
+      
+      if (cachedCities.includes(searchCity)) {
         setLoadingMsg('⚡️ 极速加载本地缓存数据中...');
       } else {
         setLoadingMsg('☁️ 正在从 Open-Meteo 实时计算拉取十年气象切片，请稍候...');
@@ -57,8 +76,8 @@ export default function App() {
 
       const { data } = await fetchHistoricalData(geo.latitude, geo.longitude, 10);
       
-      if (!cachedCities.includes(geo.name)) {
-        const newCache = [...cachedCities, geo.name];
+      if (!cachedCities.includes(searchCity)) {
+        const newCache = [...cachedCities, searchCity];
         setCachedCities(newCache);
         localStorage.setItem('cached_cities', JSON.stringify(newCache));
       }
@@ -160,6 +179,34 @@ export default function App() {
         </button>
       </form>
 
+      {recentCities.length > 0 && (
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: '-1rem', marginBottom: '1rem' }}>
+          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>最近搜索：</span>
+          {recentCities.map(c => (
+            <div key={c} style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.3rem', 
+              background: '#f1f5f9', padding: '0.2rem 0.6rem', 
+              borderRadius: '999px', fontSize: '0.85rem', color: '#334155' 
+            }}>
+              <span style={{ cursor: 'pointer' }} onClick={() => executeSearch(c)}>{c}</span>
+              <span 
+                style={{ cursor: 'pointer', color: '#94a3b8', marginLeft: '2px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }} 
+                onClick={() => {
+                  setRecentCities(prev => {
+                    const next = prev.filter(rc => rc !== c);
+                    localStorage.setItem('recent_cities', JSON.stringify(next));
+                    return next;
+                  });
+                }}
+                title="移除"
+              >
+                ×
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {error && (
         <div style={{ color: '#ef4444', textAlign: 'center', background: '#fef2f2', padding: '1rem', borderRadius: '8px' }}>
           {error}
@@ -259,16 +306,16 @@ export default function App() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', flex: 1 }}>
                       {[
                         { label: '春季', count: seasonStats['春季'], color: '#10b981', bg: '#ecfdf5', sub: '' },
-                        { label: '夏季', count: seasonStats['夏季'], color: '#ef4444', bg: '#fef2f2', sub: severeStats.summer > 0 ? `含酷夏${severeStats.summer}天` : '' },
+                        { label: '夏季', count: seasonStats['夏季'], color: '#ef4444', bg: '#fef2f2', sub: severeStats.summer > 0 ? `含高温预警: ${severeStats.summer}天` : '' },
                         { label: '秋季', count: seasonStats['秋季'], color: '#f59e0b', bg: '#fffbeb', sub: '' },
-                        { label: '冬季', count: seasonStats['冬季'], color: '#3b82f6', bg: '#eff6ff', sub: severeStats.winter > 0 ? `含寒冬${severeStats.winter}天` : '' }
+                        { label: '冬季', count: seasonStats['冬季'], color: '#3b82f6', bg: '#eff6ff', sub: severeStats.winter > 0 ? `含寒冷预警: ${severeStats.winter}天` : '' }
                       ].map(s => (
-                        <div key={s.label} style={{ background: s.bg, padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <div key={s.label} style={{ background: s.bg, padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                             <span style={{ color: s.color, fontWeight: 600, fontSize: '0.85rem' }}>{s.label}</span>
-                            {s.sub && <span style={{ fontSize: '0.7rem', color: s.color, opacity: 0.8 }}>({s.sub})</span>}
+                            <span style={{ fontWeight: 'bold', color: s.color, fontSize: '1rem' }}>{s.count}天</span>
                           </div>
-                          <span style={{ fontWeight: 'bold', color: s.color, fontSize: '1rem' }}>{s.count}天</span>
+                          {s.sub && <div style={{ fontSize: '0.7rem', color: s.color, opacity: 0.8, marginTop: '2px' }}>{s.sub}</div>}
                         </div>
                       ))}
                     </div>

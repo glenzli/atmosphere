@@ -81,7 +81,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
       title: [
         { text: '综合宜居天数对比 (十年均值)', left: '25%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
         { text: '四季时长占比分布', left: '75%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
-        { text: '极端气温天数压测 (酷夏 vs 严冬)', left: '25%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
+        { text: '极端气温天数压测 (高温预警 vs 寒冷预警)', left: '25%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
         { text: '高敏异常气象对比 (雾霾/回南/汛期/极值干湿)', left: '75%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } }
       ],
       tooltip: {
@@ -101,7 +101,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
       legend: [
         { data: ['极度舒适', '尚可接受', '较不宜居', '极端恶劣'], top: '10%', left: '5%', width: '40%' },
         { data: ['春季', '夏季', '秋季', '冬季'], top: '10%', left: '55%', width: '40%' },
-        { data: ['酷夏(高温)', '严冬(冰点)'], top: '60%', left: '5%', width: '40%' }
+        { data: ['高温预警', '寒冷预警'], top: '60%', left: '5%', width: '40%' }
       ],
       grid: [
         { left: '5%', right: '55%', top: '20%', height: '25%' }, // Grid 0: Livability
@@ -144,8 +144,8 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         { name: '冬季', type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.winter), itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
 
         // Extreme Weather
-        { name: '酷夏(高温)', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => s.severeSummer), itemStyle: { color: '#991b1b', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 40 },
-        { name: '严冬(冰点)', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => -s.severeWinter), itemStyle: { color: '#1e3a8a', borderRadius: [0, 0, 4, 4] }, barMaxWidth: 40 },
+        { name: '高温预警', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => s.severeSummer), itemStyle: { color: '#991b1b', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 40 },
+        { name: '寒冷预警', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => -s.severeWinter), itemStyle: { color: '#1e3a8a', borderRadius: [0, 0, 4, 4] }, barMaxWidth: 40 },
 
         // Radar
         {
