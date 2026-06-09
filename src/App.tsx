@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ClimateChart } from './components/ClimateChart';
 import { TrendChart } from './components/TrendChart';
+import { CompareDashboard, type CityCompareData } from './components/CompareDashboard';
 import { geocodeCity, fetchHistoricalData, clearCache } from './api';
 import './index.css';
 
@@ -8,19 +9,20 @@ export default function App() {
   const [city, setCity] = useState('');
   const [waqiToken, setWaqiToken] = useState(() => localStorage.getItem('waqi_token') || '');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [dataMap, setDataMap] = useState<Record<string, any[]> | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'daily' | 'trend'>('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'trend' | 'compare'>('daily');
   const [showConfig, setShowConfig] = useState(false);
   const [cityInfo, setCityInfo] = useState<any>(null);
+  const [compareCities, setCompareCities] = useState<CityCompareData[]>([]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!city.trim()) return;
 
     setLoading(true);
-    setError('');
+    setError(null);
     setDataMap(null);
     setCityInfo(null);
     setSelectedYear('');
@@ -109,11 +111,22 @@ export default function App() {
       {dataMap && cityInfo && (
         <div className="dashboard" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           
-          {/* Top Level Dashboard Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a', margin: 0 }}>
-                {cityInfo.name} <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 'normal' }}>{cityInfo.country}</span>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span>{cityInfo.name} <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 'normal' }}>{cityInfo.country}</span></span>
+                {compareCities.findIndex(c => c.name === cityInfo.name) === -1 && (
+                  <button 
+                    onClick={() => {
+                      if (compareCities.length >= 4) {
+                        alert('最多支持对比 4 个城市');
+                        return;
+                      }
+                      setCompareCities([...compareCities, { name: cityInfo.name, dataMap: dataMap }]);
+                    }}
+                    style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }}
+                  >+ 加入对比</button>
+                )}
               </h2>
             </div>
             
@@ -138,10 +151,20 @@ export default function App() {
                   boxShadow: viewMode === 'trend' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                 }}
               >📈 宏观十年趋势</button>
+              <button
+                  onClick={() => setViewMode('compare')}
+                  style={{
+                    padding: '0.4rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
+                    background: viewMode === 'compare' ? '#ffffff' : 'transparent',
+                    color: viewMode === 'compare' ? '#0f172a' : '#64748b',
+                    fontWeight: viewMode === 'compare' ? 600 : 400,
+                    boxShadow: viewMode === 'compare' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >⚔️ 跨城对比 PK</button>
             </div>
           </div>
 
-          {viewMode === 'daily' ? (
+          {viewMode === 'daily' && (
             <>
               <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
@@ -236,11 +259,50 @@ export default function App() {
                 </div>
               </div>
             </>
-          ) : (
+          )}
+
+          {viewMode === 'trend' && (
             <div className="card">
               <TrendChart dataMap={dataMap} />
             </div>
           )}
+
+          {viewMode === 'compare' && (
+            <CompareDashboard cities={compareCities} />
+          )}
+        </div>
+      )}
+
+      {compareCities.length > 0 && (
+        <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', background: 'white', padding: '1rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', zIndex: 50, border: '1px solid #e2e8f0', minWidth: '250px' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+            <span>⚔️ 跨城对比托盘</span>
+            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{compareCities.length}/4</span>
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+            {compareCities.map((c, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: '#f1f5f9', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.9rem' }}>
+                <span>{c.name}</span>
+                <button onClick={() => {
+                  const updated = compareCities.filter(x => x.name !== c.name);
+                  setCompareCities(updated);
+                  if (updated.length === 0 && viewMode === 'compare') {
+                    setViewMode('daily');
+                  }
+                }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444' }}>×</button>
+              </div>
+            ))}
+          </div>
+          <button 
+            onClick={() => {
+              if (compareCities.length < 2) {
+                alert('至少需要 2 个城市进行对比');
+                return;
+              }
+              setViewMode('compare');
+            }}
+            style={{ width: '100%', background: '#0f172a', color: 'white', border: 'none', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+          >开始全维度 PK</button>
         </div>
       )}
 
