@@ -45,7 +45,7 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10) 
       ...d,
       season: seasons[i].season,
       seasonColor: seasons[i].seasonColor,
-      isSevereSummer: d.tMax >= 35 || d.tAvg >= 28,
+      isSevereSummer: d.tMax >= 35 || d.tAvg >= 28 || d.twMax >= 27,
       isSevereWinter: d.tMax <= 5 || d.tAvg <= 0,
       huinan: seasons[i].huinan, // from calculateSeasons
       isHuinan: d.isHuinan,
