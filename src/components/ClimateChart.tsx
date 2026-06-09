@@ -132,23 +132,29 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
         {
           text: '🌡️ 干球气温带 (极值阴影与分段均值)',
           left: '4%',
-          top: '3%',
+          top: '1%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
         },
         {
           text: '💦 湿球体感带 (人体真实感知)',
           left: '4%',
-          top: '32%',
+          top: '26%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
         },
         {
           text: '💧 相对湿度 (干湿波动极限与连续气象期)',
           left: '4%',
-          top: '59%',
+          top: '49%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
         },
         {
           text: '🌧️ 降水量 (自动识别梅雨/汛期)',
+          left: '4%',
+          top: '64%',
+          textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
+        },
+        {
+          text: '😷 空气质量 (PM2.5 历史真实浓度)',
           left: '4%',
           top: '77%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
@@ -156,7 +162,7 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
         {
           text: '🏡 宜居综合评估条带',
           left: '4%',
-          top: '92%',
+          top: '91%',
           textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
         }
       ],

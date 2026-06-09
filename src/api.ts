@@ -22,7 +22,7 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10) 
   const startStr = startDate.toISOString().split('T')[0];
   const endStr = endDate.toISOString().split('T')[0];
 
-  const cacheKey = `weather_${lat.toFixed(3)}_${lon.toFixed(3)}_${years}_${endStr}`;
+  const cacheKey = `weather_v2_${lat.toFixed(3)}_${lon.toFixed(3)}_${years}_${endStr}`;
   let weatherData = await get(cacheKey);
   let isCached = true;
 
