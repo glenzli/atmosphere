@@ -46,30 +46,21 @@ export function evaluateLivability(
 
   let heatMultiplier = preference.hate_heat ? 1.5 : 1.0;
   let coldMultiplier = preference.hate_cold ? 1.5 : 1.0;
-  let sensitiveMultiplier = preference.sensitive ? 1.5 : 1.0;
+
+  // A. 极端热应激 (Heat Stress) - 连续抛物线插值
+  const pTw = Math.pow(Math.max(0, twMax - 20), 2);
+  const pTmax = Math.pow(Math.max(0, tMax - 30), 2);
+  let heatPenalty = Math.max(pTw, pTmax) * heatMultiplier;
   
-  // A. 极端热应激 (Heat Stress)
-  let heatPenalty = 0;
-  if (twMax >= 30 || tMax >= 40) { heatPenalty = 100; } // 致命高温
-  else if (twMax >= 28 || tMax >= 38) { heatPenalty = 60; } // 极端高温
-  else if (twMax >= 26 || tMax >= 35) { heatPenalty = 40; } // 严重危险高温
-  else if (twMax >= 24 || tMax >= 32) heatPenalty = 20;
-  
-  heatPenalty *= heatMultiplier;
-  if (heatPenalty >= 40) isExtreme = true; // 放缩后如果达到40，触发极端
+  if (heatPenalty >= 40) isExtreme = true; 
   score -= heatPenalty;
   
-  // B. 极端冷应激 (Cold Stress) - Relaxed because adding clothes is easier
+  // B. 极端冷应激 (Cold Stress) - 1.2次方平滑曲线
   const windChillPenalty = (tMin < 5 && windMax > 15) ? Math.max(0, (windMax - 10) / 5) * 1.5 : 0;
   const effectiveTMin = tMin - windChillPenalty;
   
-  let coldPenalty = 0;
-  if (effectiveTMin <= -25) { coldPenalty = 60; } // 绝对致命严寒
-  else if (effectiveTMin <= -15) { coldPenalty = 40; } // 严寒
-  else if (effectiveTMin <= -5) { coldPenalty = 20; } // 寒冷 (需厚冬装)
-  else if (effectiveTMin <= 5) { coldPenalty = 10; } // 微冷
-
-  coldPenalty *= coldMultiplier;
+  let coldPenalty = Math.pow(Math.max(0, 10 - effectiveTMin), 1.2) * coldMultiplier;
+  
   if (coldPenalty >= 60) isExtreme = true;
   score -= coldPenalty;
   
@@ -79,20 +70,27 @@ export function evaluateLivability(
   else if (dtr >= 15) score -= 20;
   else if (dtr >= 12) score -= 10;
   
-  // D. 湿度极端不适
-  let humidityPenalty = 0;
-  if (rhMin <= 15) { humidityPenalty = 30; } // 沙漠级极度干燥
-  else if (rhMin <= 20) { humidityPenalty = 15; }
+  // D1. 干燥不适 (急性物理伤害，容易流鼻血/咽喉炎)
+  let dryPenalty = 0;
+  if (rhMin <= 15) { dryPenalty = 30; } // 沙漠级极度干燥
+  else if (rhMin <= 20) { dryPenalty = 15; }
   
-  if (tAvg <= 10 && rhAvg >= 80) { humidityPenalty += 40; } // 极致湿冷魔法攻击
-  else if (tAvg <= 10 && rhAvg >= 75) { humidityPenalty += 20; }
-  
-  if (tAvg >= 15 && tAvg <= 25 && rhAvg >= 85) { humidityPenalty += 40; } // 极致回南天
-  else if (tAvg >= 15 && rhAvg >= 80) { humidityPenalty += 15; } // 闷热潮湿
+  // D2. 潮湿不适 (慢性体感/情绪伤害，发霉/粘腻)
+  let dampPenalty = 0;
+  if (tAvg <= 10 && rhAvg >= 80) { dampPenalty = 40; } // 极致湿冷魔法攻击
+  else if (tAvg <= 10 && rhAvg >= 75) { dampPenalty = 20; }
+  else if (tAvg >= 15 && tAvg <= 25 && rhAvg >= 85) { dampPenalty = 20; } // 连阴发霉/回南天 (非致命，仅降低舒适度)
+  else if (tAvg >= 15 && rhAvg >= 80) { dampPenalty = 10; } // 潮湿
 
-  humidityPenalty *= sensitiveMultiplier;
-  if (humidityPenalty >= 40) isExtreme = true;
-  score -= humidityPenalty;
+  if (preference.sensitive) {
+    dryPenalty *= 2.0; // 敏感体质对干燥（流鼻血/呼吸道刺激）反应剧烈，双倍惩罚
+    dampPenalty *= 1.2; // 敏感体质对潮湿（不舒服）仅轻微放大
+  }
+
+  if (dryPenalty >= 40) isExtreme = true; 
+  if (dampPenalty >= 40) isExtreme = true; 
+  
+  score -= (dryPenalty + dampPenalty);
   
   // E. 降雨极端天气
   if (precipAvg >= 50) { score -= 60; isExtreme = true; } // 暴雨

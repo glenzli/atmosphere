@@ -134,7 +134,7 @@ export default function App() {
               onChange={e => setPreference({ ...preference, sensitive: e.target.checked })}
               style={{ cursor: 'pointer' }}
             />
-            😷 高敏 (防污染/防潮)
+            😷 高敏 (防霾/防干/防潮)
           </label>
         </div>
       </header>
