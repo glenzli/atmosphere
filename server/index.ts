@@ -32,7 +32,7 @@ app.get('/api/geocoding', async (req, res) => {
   }
 });
 
-// Open-Meteo Historical Weather (ERA5)
+// Open-Meteo Historical Weather (ERA5) & Air Quality
 app.get('/api/weather', async (req, res) => {
   const { lat, lon, startDate, endDate } = req.query;
   if (!lat || !lon || !startDate || !endDate) {
@@ -40,32 +40,28 @@ app.get('/api/weather', async (req, res) => {
   }
 
   try {
-    // 获取温度、降水、风速，以及用于计算湿球温度的逐小时温湿度
-    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max&hourly=temperature_2m,relative_humidity_2m&timezone=auto`;
-    const response = await fetch(url);
-    const data = await response.json();
+    const weatherUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max&hourly=temperature_2m,relative_humidity_2m&timezone=auto`;
+    const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&hourly=pm2_5&timezone=auto`;
+
+    const [weatherRes, aqiRes] = await Promise.all([fetch(weatherUrl), fetch(aqiUrl)]);
+    const data = await weatherRes.json();
+    let aqData: any = {};
+    
+    if (aqiRes.ok) {
+      aqData = await aqiRes.json();
+    }
+
+    if (data.hourly) {
+      if (aqData.hourly && aqData.hourly.pm2_5) {
+        data.hourly.pm2_5 = aqData.hourly.pm2_5;
+      } else {
+        data.hourly.pm2_5 = new Array(data.hourly.time.length).fill(null);
+      }
+    }
+
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch weather data' });
-  }
-});
-
-// WAQI API proxy (If no token is provided, we can fallback to Open-Meteo Air Quality later)
-app.get('/api/aqi', async (req, res) => {
-  const { lat, lon, token } = req.query;
-  if (!lat || !lon) return res.status(400).json({ error: 'lat, lon are required' });
-  
-  if (!token) {
-    return res.status(400).json({ error: 'WAQI token is required' });
-  }
-
-  try {
-    const url = `https://api.waqi.info/feed/geo:${lat};${lon}/?token=${token}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch AQI data' });
   }
 });
 

@@ -67,11 +67,10 @@ export function evaluateLivability(
   else if (precipAvg >= 20) score -= 25; // 大雨
   else if (precipAvg >= 10) score -= 10; // 中雨
   
-  // F. PM2.5 惩罚
-  if (PM25 > 150) { score -= 50; isExtreme = true; } // 重度污染
-  else if (PM25 > 115) score -= 30;
-  else if (PM25 > 75) score -= 15;
-  else if (PM25 > 35) score -= 5;
+  // F. PM2.5 惩罚 (更严格的新国标体感)
+  if (PM25 > 150) { score -= 60; isExtreme = true; } // 重度污染 (绝对一票否决)
+  else if (PM25 > 75) { score -= 40; isExtreme = true; } // 中度污染 (一票否决为极端)
+  else if (PM25 > 35) { score -= 25; } // 轻度污染
 
   // 绝对一票否决
   if (isExtreme || score < 50) return { level: 4, label: '不宜居(极端)', color: '#ef4444' }; // Red 500

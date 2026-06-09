@@ -21,7 +21,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
       let sp = 0, su = 0, au = 0, wi = 0;
       let ss = 0, sw = 0; 
       let l1 = 0, l2 = 0, l3 = 0, l4 = 0;
-      let huinan = 0, rainy = 0, humid = 0, dry = 0;
+      let huinan = 0, rainy = 0, humid = 0, dry = 0, smog = 0;
       let rhAvgSum = 0;
       let totalDays = 0;
 
@@ -42,6 +42,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
           if (d.isRainySeason) rainy++;
           if (d.isHumidSpell) humid++;
           if (d.isDrySpell) dry++;
+          if (d.pm25Avg > 75) smog++;
           rhAvgSum += (d.rhAvg || 0);
         });
       });
@@ -62,6 +63,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         rainy: Math.round(rainy / yearsCount),
         humid: Math.round(humid / yearsCount),
         dry: Math.round(dry / yearsCount),
+        smog: Math.round(smog / yearsCount),
         rhAvg: Math.round(rhAvgSum / (totalDays || 1))
       };
     });
@@ -73,13 +75,14 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
     const maxRainy = Math.max(60, ...stats.map(s => s.rainy));
     const maxHumid = Math.max(90, ...stats.map(s => s.humid));
     const maxDry = Math.max(90, ...stats.map(s => s.dry));
+    const maxSmog = Math.max(30, ...stats.map(s => s.smog));
 
     return {
       title: [
         { text: '综合宜居天数对比 (十年均值)', left: '25%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
         { text: '四季时长占比分布', left: '75%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
         { text: '极端气温天数压测 (酷夏 vs 严冬)', left: '25%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
-        { text: '高敏异常气象对比 (回南天/汛期/极值干湿)', left: '75%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } }
+        { text: '高敏异常气象对比 (雾霾/回南/汛期/极值干湿)', left: '75%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } }
       ],
       tooltip: {
         trigger: 'axis',
@@ -112,7 +115,8 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
           { name: '回南天', max: maxHuinan },
           { name: '集中降雨/汛期', max: maxRainy },
           { name: '连续潮湿', max: maxHumid },
-          { name: '连续干燥', max: maxDry }
+          { name: '连续干燥', max: maxDry },
+          { name: '重度雾霾(>75)', max: maxSmog }
         ],
         splitArea: { areaStyle: { color: ['#f8fafc', '#f1f5f9'] } }
       },
@@ -147,7 +151,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         {
           type: 'radar',
           data: stats.map((s) => ({
-            value: [s.huinan, s.rainy, s.humid, s.dry],
+            value: [s.huinan, s.rainy, s.humid, s.dry, s.smog],
             name: s.name,
             areaStyle: { opacity: 0.1 }
           })),
@@ -155,7 +159,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
             trigger: 'item',
             formatter: (params: any) => {
               const vals = params.value;
-              return `<b>${params.name}</b><br/>回南天: ${vals[0]}天<br/>集中降雨: ${vals[1]}天<br/>连续潮湿: ${vals[2]}天<br/>连续干燥: ${vals[3]}天`;
+              return `<b>${params.name}</b><br/>回南天: ${vals[0]}天<br/>集中降雨: ${vals[1]}天<br/>连续潮湿: ${vals[2]}天<br/>连续干燥: ${vals[3]}天<br/>重度雾霾: ${vals[4]}天`;
             }
           }
         }

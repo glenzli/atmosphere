@@ -23,6 +23,8 @@ interface ClimateData {
   isRainySeason?: boolean;
   isSevereSummer?: boolean;
   isSevereWinter?: boolean;
+  pm25Avg?: number;
+  pm25Max?: number;
   livability: { level: number, label: string, color: string } | null;
 }
 
@@ -55,6 +57,8 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
     const twDiff = data.map(d => Number((d.twMax - d.twMin).toFixed(1)));
 
     const precipAvg = data.map(d => d.precipAvg);
+    const pm25Avg = data.map(d => d.pm25Avg || 0);
+    const pm25Max = data.map(d => d.pm25Max || 0);
     const rhAvg = data.map(d => d.rhAvg || 0);
     const rhMax = data.map(d => d.rhMax || 0);
     const rhMin = data.map(d => d.rhMin || 0);
@@ -241,31 +245,46 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
             { min: 70, max: 85, color: '#0ea5e9' },
             { min: 85, color: '#3b82f6' }
           ]
+        },
+        {
+          show: false,
+          dimension: 1, 
+          seriesIndex: [16, 17], // pm25Avg, pm25Max (Grid 4)
+          pieces: [
+            { max: 35, color: '#10b981' }, // 优 (绿)
+            { min: 35, max: 75, color: '#f59e0b' }, // 良 (黄)
+            { min: 75, max: 115, color: '#f97316' }, // 轻度 (橙)
+            { min: 115, max: 150, color: '#ef4444' }, // 中度 (红)
+            { min: 150, color: '#8b5cf6' } // 重度 (紫)
+          ]
         }
       ],
       axisPointer: {
         link: [{ xAxisIndex: 'all' }]
       },
       grid: [
-        { left: '4%', right: '4%', top: '6%', height: '26%' },    // Grid 0: Dry Bulb
-        { left: '4%', right: '4%', top: '35%', height: '24%' },   // Grid 1: Wet Bulb
-        { left: '4%', right: '4%', top: '62%', height: '15%' },   // Grid 2: Humidity
-        { left: '4%', right: '4%', top: '80%', height: '12%' },   // Grid 3: Precip
-        { left: '4%', right: '4%', top: '95%', height: '4%' }     // Grid 4: Livability
+        { left: '4%', right: '4%', top: '4%', height: '22%' },    // Grid 0: Dry Bulb
+        { left: '4%', right: '4%', top: '29%', height: '20%' },   // Grid 1: Wet Bulb
+        { left: '4%', right: '4%', top: '52%', height: '12%' },   // Grid 2: Humidity
+        { left: '4%', right: '4%', top: '67%', height: '10%' },   // Grid 3: Precip
+        { left: '4%', right: '4%', top: '80%', height: '10%' },   // Grid 4: PM2.5
+        { left: '4%', right: '4%', top: '94%', height: '4%' }     // Grid 5: Livability
       ],
       xAxis: [
         { type: 'category', data: dates, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 2, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 3, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
-        { type: 'category', data: dates, gridIndex: 4, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { color: '#64748b' } }
+        { type: 'category', data: dates, gridIndex: 4, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
+        { type: 'category', data: dates, gridIndex: 5, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { color: '#64748b' } }
       ],
       yAxis: [
         { type: 'value', gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
         { type: 'value', gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
         { type: 'value', gridIndex: 2, max: 100, min: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
         { type: 'value', gridIndex: 3, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
-        { type: 'value', gridIndex: 4, show: false, max: 1 }
+        { type: 'value', gridIndex: 4, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
+        { type: 'value', gridIndex: 5, show: false, max: 1 }
       ],
       series: [
         // Grid 0: Dry Bulb Track
@@ -353,9 +372,19 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
           markArea: { data: rainySeasonAreas }
         },
 
-        // Grid 4: Livability Ribbon
-        { // 16
-          name: '宜居度', type: 'bar', xAxisIndex: 4, yAxisIndex: 4,
+        // Grid 4: PM2.5 Track
+        { // 16: mapped visualMap
+          name: 'PM2.5', type: 'bar', xAxisIndex: 4, yAxisIndex: 4,
+          data: pm25Avg, barWidth: '80%', symbol: 'none'
+        },
+        { // 17: mapped visualMap
+          name: 'PM2.5最大值', type: 'line', xAxisIndex: 4, yAxisIndex: 4,
+          data: pm25Max, lineStyle: { width: 1, type: 'dashed' }, symbol: 'none'
+        },
+
+        // Grid 5: Livability Ribbon
+        { // 18
+          name: '宜居度', type: 'bar', xAxisIndex: 5, yAxisIndex: 5,
           data: data.map(d => ({
             value: 1, itemStyle: { color: d.livability ? d.livability.color : '#e2e8f0' }
           })),

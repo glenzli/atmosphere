@@ -52,7 +52,7 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10) 
       isDrySpell: d.isDrySpell,
       isHumidSpell: d.isHumidSpell,
       isRainySeason: d.isRainySeason,
-      livability: evaluateLivability(d.tAvg, d.tMax, d.tMin, d.twAvg, d.twMax, d.rhAvg, d.rhMin, d.windAvg, d.precipAvg, 0)
+      livability: evaluateLivability(d.tAvg, d.tMax, d.tMin, d.twAvg, d.twMax, d.rhAvg, d.rhMin, d.windAvg, d.precipAvg, d.pm25Avg || 0)
     }));
   };
   
@@ -130,8 +130,9 @@ function applySpells(dataset: any[]) {
 
 function aggregateByDayOfYear(weatherData: any) {
   const { time, temperature_2m_max, temperature_2m_min, temperature_2m_mean, precipitation_sum, wind_speed_10m_max } = weatherData.daily;
-  const { temperature_2m, relative_humidity_2m } = weatherData.hourly;
+  const { temperature_2m, relative_humidity_2m, pm2_5 } = weatherData.hourly;
 
+  const pm25Hourly = pm2_5 || [];
   const hourlyTw = temperature_2m.map((t: number, i: number) => calculateWetBulbTemperature(t, relative_humidity_2m[i]));
 
   const dailyTw = [];
@@ -140,10 +141,15 @@ function aggregateByDayOfYear(weatherData: any) {
   const dailyTwMin = [];
   const dailyRhMax = [];
   const dailyRhMin = [];
+  const dailyPm25Avg = [];
+  const dailyPm25Max = [];
   
   for (let i = 0; i < time.length; i++) {
     let twSum = 0;
     let rhSum = 0;
+    let pm25Sum = 0;
+    let validPm25Hours = 0;
+    let pm25Max = -Infinity;
     let twMax = -Infinity;
     let twMin = Infinity;
     let rhMax = -Infinity;
@@ -158,6 +164,13 @@ function aggregateByDayOfYear(weatherData: any) {
       rhSum += rh;
       if (rh > rhMax) rhMax = rh;
       if (rh < rhMin) rhMin = rh;
+
+      const pmVal = pm25Hourly[i * 24 + h];
+      if (pmVal !== null && pmVal !== undefined) {
+        pm25Sum += pmVal;
+        validPm25Hours++;
+        if (pmVal > pm25Max) pm25Max = pmVal;
+      }
     }
     dailyTw.push(twSum / 24);
     dailyRh.push(rhSum / 24);
@@ -165,6 +178,8 @@ function aggregateByDayOfYear(weatherData: any) {
     dailyTwMin.push(twMin === Infinity ? 0 : twMin);
     dailyRhMax.push(rhMax === -Infinity ? 0 : rhMax);
     dailyRhMin.push(rhMin === Infinity ? 0 : rhMin);
+    dailyPm25Avg.push(validPm25Hours > 0 ? pm25Sum / validPm25Hours : 0);
+    dailyPm25Max.push(pm25Max === -Infinity ? 0 : pm25Max);
   }
 
   const daysMap = new Map();
@@ -174,7 +189,9 @@ function aggregateByDayOfYear(weatherData: any) {
     tAvgSum: 0, tMaxSum: 0, tMinSum: 0,
     precipSum: 0, windSum: 0,
     twSum: 0, twMaxSum: 0, twMinSum: 0,
-    rhSum: 0, rhMaxSum: 0, rhMinSum: 0, count: 0
+    rhSum: 0, rhMaxSum: 0, rhMinSum: 0, 
+    pm25AvgSum: 0, pm25MaxSum: 0,
+    count: 0
   });
 
   for (let i = 0; i < time.length; i++) {
@@ -205,6 +222,8 @@ function aggregateByDayOfYear(weatherData: any) {
       entry.rhSum += dailyRh[i];
       entry.rhMaxSum += dailyRhMax[i];
       entry.rhMinSum += dailyRhMin[i];
+      entry.pm25AvgSum += dailyPm25Avg[i];
+      entry.pm25MaxSum += dailyPm25Max[i];
       entry.count += 1;
 
       yearEntry.tAvgSum += temperature_2m_mean[i];
@@ -218,6 +237,8 @@ function aggregateByDayOfYear(weatherData: any) {
       yearEntry.rhSum += dailyRh[i];
       yearEntry.rhMaxSum += dailyRhMax[i];
       yearEntry.rhMinSum += dailyRhMin[i];
+      yearEntry.pm25AvgSum += dailyPm25Avg[i];
+      yearEntry.pm25MaxSum += dailyPm25Max[i];
       yearEntry.count += 1;
     }
   }
@@ -235,6 +256,8 @@ function aggregateByDayOfYear(weatherData: any) {
     rhAvg: Number((e.rhSum / e.count).toFixed(1)),
     rhMax: Number((e.rhMaxSum / e.count).toFixed(1)),
     rhMin: Number((e.rhMinSum / e.count).toFixed(1)),
+    pm25Avg: Number((e.pm25AvgSum / e.count).toFixed(1)),
+    pm25Max: Number((e.pm25MaxSum / e.count).toFixed(1)),
   });
 
   const averageResult: any[] = [];
