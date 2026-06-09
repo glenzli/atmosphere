@@ -7,8 +7,8 @@ import './index.css';
 
 export default function App() {
   const [city, setCity] = useState('');
-  const [waqiToken, setWaqiToken] = useState(() => localStorage.getItem('waqi_token') || '');
   const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('加载中...');
   const [error, setError] = useState<string | null>(null);
   const [dataMap, setDataMap] = useState<Record<string, any[]> | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>('');
@@ -16,6 +16,9 @@ export default function App() {
   const [showConfig, setShowConfig] = useState(false);
   const [cityInfo, setCityInfo] = useState<any>(null);
   const [compareCities, setCompareCities] = useState<CityCompareData[]>([]);
+  const [cachedCities, setCachedCities] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('cached_cities') || '[]'); } catch { return []; }
+  });
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +33,21 @@ export default function App() {
     try {
       const geo = await geocodeCity(city);
       setCityInfo(geo);
-      const data = await fetchHistoricalData(geo.latitude, geo.longitude, 10, waqiToken || undefined);
       
+      if (cachedCities.includes(geo.name)) {
+        setLoadingMsg('⚡️ 极速加载本地缓存数据中...');
+      } else {
+        setLoadingMsg('☁️ 正在从 Open-Meteo 实时计算拉取十年气象切片，请稍候...');
+      }
+
+      const { data } = await fetchHistoricalData(geo.latitude, geo.longitude, 10);
+      
+      if (!cachedCities.includes(geo.name)) {
+        const newCache = [...cachedCities, geo.name];
+        setCachedCities(newCache);
+        localStorage.setItem('cached_cities', JSON.stringify(newCache));
+      }
+
       setDataMap(data);
       
       const sortedYears = Object.keys(data).sort((a, b) => Number(b.replace('年', '')) - Number(a.replace('年', '')));
@@ -104,7 +120,7 @@ export default function App() {
 
       {loading && (
         <div className="loader">
-          正在从 Open-Meteo 抓取并计算过去10年的逐小时海量数据，请稍候...
+          {loadingMsg}
         </div>
       )}
 
@@ -118,8 +134,8 @@ export default function App() {
                 {compareCities.findIndex(c => c.name === cityInfo.name) === -1 && (
                   <button 
                     onClick={() => {
-                      if (compareCities.length >= 4) {
-                        alert('最多支持对比 4 个城市');
+                      if (compareCities.length >= 8) {
+                        alert('最多支持对比 8 个城市');
                         return;
                       }
                       setCompareCities([...compareCities, { name: cityInfo.name, dataMap: dataMap }]);
@@ -277,7 +293,7 @@ export default function App() {
         <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', background: 'white', padding: '1rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', zIndex: 50, border: '1px solid #e2e8f0', minWidth: '250px' }}>
           <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
             <span>⚔️ 跨城对比托盘</span>
-            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{compareCities.length}/4</span>
+            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{compareCities.length}/8</span>
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
             {compareCities.map((c, i) => (
@@ -309,29 +325,29 @@ export default function App() {
       {showConfig && (
         <div className="modal-overlay" onClick={() => setShowConfig(false)}>
           <div className="modal card" onClick={e => e.stopPropagation()}>
-            <h2>⚙️ 系统配置</h2>
-            <div className="form-group">
-              <label>WAQI API Token (用于获取空气质量)</label>
-              <input
-                type="text"
-                className="input-field"
-                value={waqiToken}
-                onChange={(e) => setWaqiToken(e.target.value)}
-                placeholder="在此输入您的 token..."
-              />
-              <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
-                如果不填，宜居度模型将不会加入空气质量惩罚。
-              </p>
-            </div>
+            <h2>⚙️ 系统配置与缓存管理</h2>
             
-            <div className="form-group" style={{ marginTop: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0' }}>
-              <label>本地气象数据缓存</label>
+            <div className="form-group" style={{ paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0' }}>
+              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>本地已缓存城市列表 ({cachedCities.length})</span>
+              </label>
+              <div style={{ background: '#f8fafc', padding: '0.5rem', borderRadius: '8px', maxHeight: '150px', overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                {cachedCities.length === 0 ? (
+                  <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>暂无缓存数据</span>
+                ) : (
+                  cachedCities.map(c => (
+                    <span key={c} style={{ background: '#e2e8f0', color: '#334155', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem' }}>{c}</span>
+                  ))
+                )}
+              </div>
               <button 
                 type="button"
                 className="btn btn-secondary" 
-                style={{ width: '100%', marginTop: '0.5rem', borderColor: '#ef4444', color: '#ef4444', backgroundColor: '#fef2f2' }}
+                style={{ width: '100%', marginTop: '1rem', borderColor: '#ef4444', color: '#ef4444', backgroundColor: '#fef2f2' }}
                 onClick={async () => {
                   await clearCache();
+                  setCachedCities([]);
+                  localStorage.removeItem('cached_cities');
                   alert('全部城市历史气象缓存已清理完毕！');
                 }}
               >
@@ -340,11 +356,7 @@ export default function App() {
             </div>
 
             <div className="form-actions" style={{ marginTop: '1rem' }}>
-              <button className="btn btn-secondary" onClick={() => setShowConfig(false)}>取消</button>
-              <button className="btn" onClick={() => {
-                localStorage.setItem('waqi_token', waqiToken);
-                setShowConfig(false);
-              }}>保存</button>
+              <button className="btn" onClick={() => setShowConfig(false)}>关闭</button>
             </div>
           </div>
         </div>

@@ -76,10 +76,10 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
 
     return {
       title: [
-        { text: '十年年均宜居期大满贯 (天)', left: '25%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
-        { text: '四季黄金比例分布 (天)', left: '75%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
-        { text: '极端炼狱天数压测 (酷夏 vs 寒冬)', left: '25%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
-        { text: '魔法攻击雷达 (回南/梅雨/干湿期)', left: '75%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } }
+        { text: '综合宜居天数对比 (十年均值)', left: '25%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
+        { text: '四季时长占比分布', left: '75%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
+        { text: '极端气温天数压测 (酷夏 vs 严冬)', left: '25%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
+        { text: '高敏异常气象对比 (回南天/汛期/极值干湿)', left: '75%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } }
       ],
       tooltip: {
         trigger: 'axis',

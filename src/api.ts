@@ -13,7 +13,7 @@ export async function geocodeCity(name: string) {
   return data.results[0]; // { latitude, longitude, name, country }
 }
 
-export async function fetchHistoricalData(lat: number, lon: number, years = 10, waqiToken?: string) {
+export async function fetchHistoricalData(lat: number, lon: number, years = 10) {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setFullYear(endDate.getFullYear() - years);
@@ -24,8 +24,10 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10, 
 
   const cacheKey = `weather_${lat.toFixed(3)}_${lon.toFixed(3)}_${years}_${endStr}`;
   let weatherData = await get(cacheKey);
+  let isCached = true;
 
   if (!weatherData) {
+    isCached = false;
     const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}&startDate=${startStr}&endDate=${endStr}`);
     if (!res.ok) throw new Error('Weather data fetch failed');
     weatherData = await res.json();
@@ -34,20 +36,6 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10, 
 
   // Aggregate data and extract full years
   const { yearly } = aggregateByDayOfYear(weatherData);
-
-  // Optional AQI fetch
-  let currentAqi = null;
-  if (waqiToken) {
-    try {
-      const aqiRes = await fetch(`/api/aqi?lat=${lat}&lon=${lon}&token=${waqiToken}`);
-      const aqiJson = await aqiRes.json();
-      if (aqiJson.status === 'ok') {
-        currentAqi = aqiJson.data.aqi; 
-      }
-    } catch (e) {
-      console.warn('AQI fetch failed', e);
-    }
-  }
 
   const resultMap: Record<string, any[]> = {};
 
@@ -64,7 +52,7 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10, 
       isDrySpell: d.isDrySpell,
       isHumidSpell: d.isHumidSpell,
       isRainySeason: d.isRainySeason,
-      livability: evaluateLivability(d.tAvg, d.tMax, d.tMin, d.twAvg, d.twMax, d.rhAvg, d.rhMin, d.windAvg, d.precipAvg, currentAqi || 0)
+      livability: evaluateLivability(d.tAvg, d.tMax, d.tMin, d.twAvg, d.twMax, d.rhAvg, d.rhMin, d.windAvg, d.precipAvg, 0)
     }));
   };
   
@@ -73,7 +61,7 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10, 
     resultMap[`${year}年`] = processDataset(yearly[year]);
   }
 
-  return resultMap;
+  return { data: resultMap, isCached };
 }
 
 function applySpells(dataset: any[]) {
