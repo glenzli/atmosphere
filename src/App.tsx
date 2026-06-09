@@ -3,6 +3,7 @@ import { ClimateChart } from './components/ClimateChart';
 import { TrendChart } from './components/TrendChart';
 import { CompareDashboard, type CityCompareData } from './components/CompareDashboard';
 import { geocodeCity, fetchHistoricalData, clearCache } from './api';
+import { applyLivabilityPreference, type PreferenceConfig, defaultPreference } from './utils/analyzer';
 import './index.css';
 
 export default function App() {
@@ -16,9 +17,23 @@ export default function App() {
   const [showConfig, setShowConfig] = useState(false);
   const [cityInfo, setCityInfo] = useState<any>(null);
   const [compareCities, setCompareCities] = useState<CityCompareData[]>([]);
+  const [preference, setPreference] = useState<PreferenceConfig>(defaultPreference);
   const [cachedCities, setCachedCities] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('cached_cities') || '[]'); } catch { return []; }
   });
+
+  // Whenever preference changes, re-apply it to dataMap and compareCities
+  React.useEffect(() => {
+    if (dataMap) {
+      setDataMap(applyLivabilityPreference(dataMap, preference));
+    }
+    if (compareCities.length > 0) {
+      setCompareCities(cities => cities.map(c => ({
+        ...c,
+        dataMap: applyLivabilityPreference(c.dataMap, preference)
+      })));
+    }
+  }, [preference]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,8 +102,41 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <h1>Atmosphere 气象宜居分析仪</h1>
+        <h1>Atmosphere</h1>
         <p>输入全球任意城市，基于过去10年气象数据推演真实体感宜居度</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', background: '#f8fafc', padding: '0.6rem 1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: 'fit-content', margin: '1rem auto 0' }}>
+          <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 'bold' }}>体质偏好叠加:</span>
+          
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+            <input 
+              type="checkbox" 
+              checked={preference.hate_heat}
+              onChange={e => setPreference({ ...preference, hate_heat: e.target.checked })}
+              style={{ cursor: 'pointer' }}
+            />
+            ❄️ 怕热 (避暑)
+          </label>
+          
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+            <input 
+              type="checkbox" 
+              checked={preference.hate_cold}
+              onChange={e => setPreference({ ...preference, hate_cold: e.target.checked })}
+              style={{ cursor: 'pointer' }}
+            />
+            🔥 怕冷 (避寒)
+          </label>
+          
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+            <input 
+              type="checkbox" 
+              checked={preference.sensitive}
+              onChange={e => setPreference({ ...preference, sensitive: e.target.checked })}
+              style={{ cursor: 'pointer' }}
+            />
+            😷 高敏 (防污染/防潮)
+          </label>
+        </div>
       </header>
 
       <form onSubmit={handleSearch} className="search-bar">
@@ -138,7 +186,7 @@ export default function App() {
                         alert('最多支持对比 8 个城市');
                         return;
                       }
-                      setCompareCities([...compareCities, { name: cityInfo.name, dataMap: dataMap }]);
+                      setCompareCities([...compareCities, { name: cityInfo.name, dataMap: applyLivabilityPreference(dataMap, preference) }]);
                     }}
                     style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }}
                   >+ 加入对比</button>

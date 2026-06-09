@@ -10,6 +10,18 @@ export function calculateWetBulbTemperature(T: number, RH: number): number {
     0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH) - 4.686035;
 }
 
+export interface PreferenceConfig {
+  hate_heat: boolean;
+  hate_cold: boolean;
+  sensitive: boolean;
+}
+
+export const defaultPreference: PreferenceConfig = {
+  hate_heat: false,
+  hate_cold: false,
+  sensitive: false
+};
+
 /**
  * 宜居度评分 (Livability Index)
  * @param Tw 湿球温度
@@ -26,25 +38,40 @@ export function evaluateLivability(
   rhMin: number,
   windMax: number,
   precipAvg: number,
-  PM25: number = 0
+  PM25: number = 0,
+  preference: PreferenceConfig = defaultPreference
 ) {
   let score = 100;
   let isExtreme = false; // 绝对否决权标志
+
+  let heatMultiplier = preference.hate_heat ? 1.5 : 1.0;
+  let coldMultiplier = preference.hate_cold ? 1.5 : 1.0;
+  let sensitiveMultiplier = preference.sensitive ? 1.5 : 1.0;
   
   // A. 极端热应激 (Heat Stress)
-  if (twMax >= 30 || tMax >= 40) { score -= 100; isExtreme = true; } // 致命高温
-  else if (twMax >= 28 || tMax >= 38) { score -= 60; isExtreme = true; } // 极端高温
-  else if (twMax >= 26 || tMax >= 35) { score -= 40; isExtreme = true; } // 严重危险高温
-  else if (twMax >= 24 || tMax >= 32) score -= 20;
+  let heatPenalty = 0;
+  if (twMax >= 30 || tMax >= 40) { heatPenalty = 100; } // 致命高温
+  else if (twMax >= 28 || tMax >= 38) { heatPenalty = 60; } // 极端高温
+  else if (twMax >= 26 || tMax >= 35) { heatPenalty = 40; } // 严重危险高温
+  else if (twMax >= 24 || tMax >= 32) heatPenalty = 20;
+  
+  heatPenalty *= heatMultiplier;
+  if (heatPenalty >= 40) isExtreme = true; // 放缩后如果达到40，触发极端
+  score -= heatPenalty;
   
   // B. 极端冷应激 (Cold Stress) - Relaxed because adding clothes is easier
   const windChillPenalty = (tMin < 5 && windMax > 15) ? Math.max(0, (windMax - 10) / 5) * 1.5 : 0;
   const effectiveTMin = tMin - windChillPenalty;
   
-  if (effectiveTMin <= -25) { score -= 60; isExtreme = true; } // 绝对致命严寒
-  else if (effectiveTMin <= -15) { score -= 40; } // 严寒
-  else if (effectiveTMin <= -5) { score -= 20; } // 寒冷 (需厚冬装)
-  else if (effectiveTMin <= 5) { score -= 10; } // 微冷
+  let coldPenalty = 0;
+  if (effectiveTMin <= -25) { coldPenalty = 60; } // 绝对致命严寒
+  else if (effectiveTMin <= -15) { coldPenalty = 40; } // 严寒
+  else if (effectiveTMin <= -5) { coldPenalty = 20; } // 寒冷 (需厚冬装)
+  else if (effectiveTMin <= 5) { coldPenalty = 10; } // 微冷
+
+  coldPenalty *= coldMultiplier;
+  if (coldPenalty >= 60) isExtreme = true;
+  score -= coldPenalty;
   
   // C. 生理波动应激 (Diurnal Temperature Range)
   const dtr = tMax - tMin;
@@ -53,14 +80,19 @@ export function evaluateLivability(
   else if (dtr >= 12) score -= 10;
   
   // D. 湿度极端不适
-  if (rhMin <= 15) { score -= 30; isExtreme = true; } // 沙漠级极度干燥
-  else if (rhMin <= 20) score -= 15; 
+  let humidityPenalty = 0;
+  if (rhMin <= 15) { humidityPenalty = 30; } // 沙漠级极度干燥
+  else if (rhMin <= 20) { humidityPenalty = 15; }
   
-  if (tAvg <= 10 && rhAvg >= 80) { score -= 40; isExtreme = true; } // 极致湿冷魔法攻击
-  else if (tAvg <= 10 && rhAvg >= 75) score -= 20; 
+  if (tAvg <= 10 && rhAvg >= 80) { humidityPenalty += 40; } // 极致湿冷魔法攻击
+  else if (tAvg <= 10 && rhAvg >= 75) { humidityPenalty += 20; }
   
-  if (tAvg >= 15 && tAvg <= 25 && rhAvg >= 85) { score -= 40; isExtreme = true; } // 极致回南天
-  else if (tAvg >= 15 && rhAvg >= 80) score -= 15; // 闷热潮湿
+  if (tAvg >= 15 && tAvg <= 25 && rhAvg >= 85) { humidityPenalty += 40; } // 极致回南天
+  else if (tAvg >= 15 && rhAvg >= 80) { humidityPenalty += 15; } // 闷热潮湿
+
+  humidityPenalty *= sensitiveMultiplier;
+  if (humidityPenalty >= 40) isExtreme = true;
+  score -= humidityPenalty;
   
   // E. 降雨极端天气
   if (precipAvg >= 50) { score -= 60; isExtreme = true; } // 暴雨
@@ -68,10 +100,19 @@ export function evaluateLivability(
   else if (precipAvg >= 10) score -= 10; // 中雨
   
   // F. PM2.5 惩罚 (基于中国环境空气质量标准)
-  if (PM25 > 150) { score -= 60; isExtreme = true; } // 重度/严重污染 (绝对一票否决)
-  else if (PM25 > 115) { score -= 40; isExtreme = true; } // 中度污染 (一票否决为极端)
-  else if (PM25 > 75) { score -= 20; } // 轻度污染
-  else if (PM25 > 35) { score -= 5; } // 良 (非常轻微的扣分)
+  let pmPenalty = 0;
+  if (PM25 > 150) { pmPenalty = 60; } // 重度/严重污染 
+  else if (PM25 > 115) { pmPenalty = 40; } // 中度污染 
+  else if (PM25 > 75) { pmPenalty = 20; } // 轻度污染
+  else if (PM25 > 35) { pmPenalty = 5; } // 良 (非常轻微的扣分)
+
+  if (preference.sensitive) {
+    pmPenalty *= 2.0; // 敏感体质对污染双倍惩罚
+    if (PM25 > 75) isExtreme = true; // 轻度污染对敏感体质直接一票否决
+  }
+
+  if (pmPenalty >= 40) isExtreme = true;
+  score -= pmPenalty;
 
   // 绝对一票否决
   if (isExtreme || score < 50) return { level: 4, label: '极端恶劣', color: '#ef4444' }; // Red 500
@@ -171,19 +212,37 @@ export function calculateSeasons(dailyData: { date: string, tAvg: number, rhAvg:
 
   for (let i = 0; i < n; i++) {
     // 回南天多发期判定近似逻辑：春季或冬末，气温在12-22度之间，相对湿度极高(>82%)
-    const isHuiNan = (seasonsArr[i] === '春季' || seasonsArr[i] === '冬季') 
+    let isHuinan = (seasonsArr[i] === '春季' || seasonsArr[i] === '冬季') 
                    && dailyData[i].rhAvg >= 82 
                    && dailyData[i].tAvg >= 12 
                    && dailyData[i].tAvg <= 22;
+    if (i > 0 && Math.abs(T5[i] - 22) > 0.5) isHuinan = false;
+
     result.push({
       date: dailyData[i].date,
       tAvg: dailyData[i].tAvg,
       movingAvg: T5[i],
       season: seasonsArr[i],
       seasonColor: colorMap[seasonsArr[i]],
-      huinan: isHuiNan
+      huinan: isHuinan
     });
   }
 
   return result;
+}
+
+/**
+ * 重新应用体质偏好计算一个城市数据集中所有的宜居度
+ */
+export function applyLivabilityPreference(dataMap: Record<string, any[]>, preference: PreferenceConfig) {
+  const newMap = { ...dataMap };
+  for (const year of Object.keys(newMap)) {
+    newMap[year] = newMap[year].map(d => ({
+      ...d,
+      livability: evaluateLivability(
+        d.tAvg, d.tMax, d.tMin, d.twAvg, d.twMax, d.rhAvg, d.rhMin, d.windAvg, d.precipAvg, d.pm25Avg || 0, preference
+      )
+    }));
+  }
+  return newMap;
 }
