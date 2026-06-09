@@ -4,6 +4,7 @@ import { TrendChart } from './components/TrendChart';
 import { CompareDashboard, type CityCompareData } from './components/CompareDashboard';
 import { geocodeCity, fetchHistoricalData, clearCache } from './api';
 import { applyLivabilityPreference, type PreferenceConfig, defaultPreference } from './utils/analyzer';
+import { Predictor } from './components/Predictor';
 import './index.css';
 
 export default function App() {
@@ -13,7 +14,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [dataMap, setDataMap] = useState<Record<string, any[]> | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'daily' | 'trend' | 'compare'>('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'trend' | 'compare' | 'predict'>('daily');
   const [showConfig, setShowConfig] = useState(false);
   const [cityInfo, setCityInfo] = useState<any>(null);
   const [compareCities, setCompareCities] = useState<CityCompareData[]>([]);
@@ -272,8 +273,22 @@ export default function App() {
                     boxShadow: viewMode === 'compare' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
                 >⚔️ 跨城对比 PK</button>
+              <button
+                onClick={() => setViewMode('predict')}
+                style={{
+                  padding: '0.4rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
+                  background: viewMode === 'predict' ? '#ffffff' : 'transparent',
+                  color: viewMode === 'predict' ? '#0f172a' : '#64748b',
+                  fontWeight: viewMode === 'predict' ? 600 : 400,
+                  boxShadow: viewMode === 'predict' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >🔮 旅行气候预测</button>
             </div>
           </div>
+
+          {viewMode === 'predict' && (
+            <Predictor dataMap={dataMap} cityName={cityInfo.name} />
+          )}
 
           {viewMode === 'daily' && (
             <>

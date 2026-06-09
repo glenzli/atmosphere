@@ -13,6 +13,16 @@ export async function geocodeCity(name: string) {
   return data.results[0]; // { latitude, longitude, name, country }
 }
 
+export async function fetchEnsoStatus() {
+  try {
+    const res = await fetch('/api/enso');
+    if (!res.ok) throw new Error('Network error');
+    return await res.json();
+  } catch (err) {
+    return { status: 'Neutral', value: 0, error: true };
+  }
+}
+
 export async function fetchHistoricalData(lat: number, lon: number, years = 10) {
   const endDate = new Date();
   const startDate = new Date();
