@@ -32,7 +32,7 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
       level1: [] as number[], // 极度舒适
       level2: [] as number[], // 尚可接受
       level3: [] as number[], // 较不宜居
-      level4: [] as number[]  // 不宜居(极端)
+      level4: [] as number[]  // 极端恶劣
     };
 
     validYears.forEach(year => {
@@ -87,7 +87,7 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
       },
       legend: [
         { data: ['春季', '夏季', '秋季', '冬季', '酷夏(高温)', '严冬(冰点)'], top: '6%', right: '4%' },
-        { data: ['极度舒适', '尚可接受', '总宜居趋势', '较不宜居', '不宜居(极端)', '总恶劣趋势'], top: '53%', right: '4%', type: 'scroll', width: '60%' }
+        { data: ['极度舒适', '尚可接受', '全年宜居期', '较不宜居', '极端恶劣', '全年恶劣期'], top: '53%', right: '4%', type: 'scroll', width: '60%' }
       ],
       grid: [
         { left: '4%', right: '4%', top: '15%', height: '30%' }, // Seasons Grid
@@ -115,11 +115,11 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
         { name: '极度舒适', type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level1, itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
         { name: '尚可接受', type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level2, itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
         { name: '较不宜居', type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level3, itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
-        { name: '不宜居(极端)', type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level4, itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
+        { name: '极端恶劣', type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level4, itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
         
         // Grid 1: Trend Lines
-        { name: '总宜居趋势', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalLivable, itemStyle: { color: '#047857' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 },
-        { name: '总恶劣趋势', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalUnlivable, itemStyle: { color: '#b91c1c' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 }
+        { name: '全年宜居期', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalLivable, itemStyle: { color: '#047857' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 },
+        { name: '全年恶劣期', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalUnlivable, itemStyle: { color: '#b91c1c' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 }
       ]
     };
   }, [dataMap]);

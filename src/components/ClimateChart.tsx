@@ -210,6 +210,15 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
           else if (pointData.precipAvg >= 1) precipLevel = '小雨';
           html += `降雨情况: <b>${precipLevel}</b> (${pointData.precipAvg} mm)<br/>`;
 
+          if (pointData.pm25Avg !== undefined) {
+            let pmColor = '#10b981'; // 优
+            if (pointData.pm25Avg > 150) pmColor = '#8b5cf6'; // 重度
+            else if (pointData.pm25Avg > 115) pmColor = '#ef4444'; // 中度
+            else if (pointData.pm25Avg > 75) pmColor = '#f97316'; // 轻度
+            else if (pointData.pm25Avg > 35) pmColor = '#f59e0b'; // 良
+            html += `空气质量 (PM2.5): <b style="color:${pmColor}">${pointData.pm25Avg}</b> (峰值: ${pointData.pm25Max})<br/>`;
+          }
+
           return html;
         }
       },

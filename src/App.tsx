@@ -250,7 +250,7 @@ export default function App() {
 
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ flex: 1, background: '#fef2f2', padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: '#dc2626', fontWeight: 'bold', fontSize: '0.85rem' }}>气候恶劣期</span>
+                          <span style={{ color: '#dc2626', fontWeight: 'bold', fontSize: '0.85rem' }}>全年恶劣期</span>
                           <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#b91c1c' }}>{livableStats.level3 + livableStats.level4} <span style={{fontSize: '0.7rem', fontWeight: 'normal'}}>天</span></span>
                         </div>
                         <div style={{ flex: 1, display: 'flex', gap: '0.5rem' }}>
@@ -259,7 +259,7 @@ export default function App() {
                             <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#b45309' }}>{livableStats.level3}</span>
                           </div>
                           <div style={{ flex: 1, background: '#fee2e2', padding: '0.3rem 0.5rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>不宜居(极端)</span>
+                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>极端恶劣</span>
                             <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#b91c1c' }}>{livableStats.level4}</span>
                           </div>
                         </div>

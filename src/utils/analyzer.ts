@@ -67,13 +67,14 @@ export function evaluateLivability(
   else if (precipAvg >= 20) score -= 25; // 大雨
   else if (precipAvg >= 10) score -= 10; // 中雨
   
-  // F. PM2.5 惩罚 (更严格的新国标体感)
-  if (PM25 > 150) { score -= 60; isExtreme = true; } // 重度污染 (绝对一票否决)
-  else if (PM25 > 75) { score -= 40; isExtreme = true; } // 中度污染 (一票否决为极端)
-  else if (PM25 > 35) { score -= 25; } // 轻度污染
+  // F. PM2.5 惩罚 (基于中国环境空气质量标准)
+  if (PM25 > 150) { score -= 60; isExtreme = true; } // 重度/严重污染 (绝对一票否决)
+  else if (PM25 > 115) { score -= 40; isExtreme = true; } // 中度污染 (一票否决为极端)
+  else if (PM25 > 75) { score -= 20; } // 轻度污染
+  else if (PM25 > 35) { score -= 5; } // 良 (非常轻微的扣分)
 
   // 绝对一票否决
-  if (isExtreme || score < 50) return { level: 4, label: '不宜居(极端)', color: '#ef4444' }; // Red 500
+  if (isExtreme || score < 50) return { level: 4, label: '极端恶劣', color: '#ef4444' }; // Red 500
   
   if (score >= 85) return { level: 1, label: '极度舒适', color: '#10b981' }; // Emerald 500
   if (score >= 70) return { level: 2, label: '尚可接受', color: '#3b82f6' }; // Blue 500
