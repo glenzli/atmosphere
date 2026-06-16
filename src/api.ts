@@ -1,4 +1,4 @@
-import { calculateWetBulbTemperature, calculateSeasons, evaluateLivability } from './utils/analyzer';
+import { calculateWetBulbTemperature, calculateSeasons, evaluateLivability, dewPoint, apparentTemperature } from './utils/analyzer';
 import { get, set, clear } from 'idb-keyval';
 
 export async function clearCache() {
@@ -269,6 +269,8 @@ function aggregateByDayOfYear(weatherData: any) {
     rhMin: Number((e.rhMinSum / e.count).toFixed(1)),
     pm25Avg: Number((e.pm25AvgSum / e.count).toFixed(1)),
     pm25Max: Number((e.pm25MaxSum / e.count).toFixed(1)),
+    dewPoint: Number(dewPoint(e.tAvgSum / e.count, e.rhSum / e.count).toFixed(1)),
+    at: Number(apparentTemperature(e.tAvgSum / e.count, e.rhSum / e.count, e.windSum / e.count).toFixed(1)),
   });
 
   const averageResult: any[] = [];

@@ -53,12 +53,22 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
   const getFeelsLikeText = (res: NonNullable<typeof result>) => {
     let text = '💡 综合结论：';
     
-    if (res.twMaxRange[1] >= 27) text += '典型极度闷热的“桑拿天”，极易中暑，日间不宜长时间在户外。';
-    else if (res.twMaxRange[1] >= 24) text += '气候较湿热，体感闷热，户外活动易大量出汗。';
-    else if (res.tMaxRange[1] >= 30 && res.rhRange[1] < 60) text += '日间高温干热，注意防晒，但在阴凉处较舒适。';
-    else if (res.tMinRange[0] <= 5) text += '极其寒冷，可能遭遇刺骨寒风，务必准备重装御寒衣物。';
-    else if (res.tMaxRange[1] <= 15) text += '气候偏冷，体感微寒。';
-    else text += '气温舒适宜人，体感干爽，是黄金旅游窗口期。';
+    // 使用体感温度 AT 做定性描述（比干球温度更贴近人体感受）
+    const atHigh = res.atRange[1];
+    const atLow = res.atRange[0];
+    const tdHigh = res.dewPointRange[1];
+    
+    if (atHigh >= 35) text += '体感温度极高，典型"桑拿天"，极易中暑，日间不宜长时间在户外。';
+    else if (atHigh >= 30 && tdHigh >= 20) text += '体感闷热潮湿，户外活动易大量出汗，建议选择清晨或傍晚出行。';
+    else if (atHigh >= 30 && tdHigh < 16) text += '日间高温但空气干爽，阴凉处体感尚可，注意防晒补水。';
+    else if (atLow <= 0) text += '体感极其寒冷，可能遭遇刺骨寒风，务必准备重装御寒衣物。';
+    else if (atHigh <= 10) text += '体感偏冷，需要添加保暖衣物。';
+    else if (atHigh >= 15 && atHigh <= 26 && tdHigh >= 9 && tdHigh <= 16) text += '体感温度非常舒适（AT ' + atLow + '~' + atHigh + '°C），是黄金旅游窗口期！';
+    else text += '气温总体适中，体感尚可。';
+
+    // 露点补充描述
+    if (tdHigh >= 22) text += ' 空气极其潮湿黏腻（露点高达' + tdHigh + '°C），汗液难以蒸发。';
+    else if (tdHigh >= 18 && atHigh >= 25) text += ' 空气偏潮，体感略闷。';
 
     if (res.rainProb > 50) text += ` 降雨极其频繁（${res.precipScale}），出行需随时备好雨具。`;
     else if (res.rainProb > 20) text += ` 偶有阵雨，对行程影响不大。`;
@@ -74,13 +84,16 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
 
   const getPackingAdvice = (res: NonNullable<typeof result>) => {
     const advice = [];
+    const atHigh = res.atRange[1];
+    const tdHigh = res.dewPointRange[1];
+    const tdLow = res.dewPointRange[0];
     
-    // Clothing
-    if (res.tMaxRange[1] >= 30) {
+    // Clothing - based on AT for better accuracy
+    if (atHigh >= 30) {
       advice.push('👕 穿衣：以透气排汗的短袖、短裤/裙为主。');
-    } else if (res.tMaxRange[1] >= 20) {
+    } else if (atHigh >= 20) {
       advice.push('🧥 穿衣：早晚微凉，建议带一件薄外套或长袖衬衫。');
-    } else if (res.tMaxRange[1] >= 10) {
+    } else if (atHigh >= 10) {
       advice.push('🧥 穿衣：气温较低，建议穿着毛衣加防风外套或轻薄羽绒服。');
     } else {
       advice.push('🧣 穿衣：严寒天气，需备加厚羽绒服、保暖内衣、手套及围巾。');
@@ -98,15 +111,19 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
       advice.push('🌂 雨具：有局部阵雨可能，建议带一把晴雨伞备用。');
     }
 
-    // Misc
+    // Air quality
     if (res.smogProb >= 20 || res.severeSmogProb > 5) {
       advice.push('😷 防护：空气质量可能较差，建议老人儿童及敏感人群备好 N95/KN95 口罩。');
     }
-    if (res.twMaxRange[1] >= 26) {
-      advice.push('💧 补水：体感极其闷热，需备好大容量水壶，随时补充水分防中暑。');
+    
+    // Hydration - based on dew point (muggy)
+    if (tdHigh >= 20) {
+      advice.push('💧 补水：露点高达' + tdHigh + '°C，体感极闷，需备好大容量水壶防中暑。');
     }
-    if (res.rhRange[0] < 40 && res.tMaxRange[1] < 25) {
-      advice.push('🧴 保湿：气候较为干燥，建议携带润唇膏和保湿霜。');
+    
+    // Dry skin - based on dew point
+    if (tdLow < 5) {
+      advice.push('🧴 保湿：露点极低（' + tdLow + '°C），空气干燥，建议携带润唇膏和保湿霜。');
     }
 
     return advice;
@@ -246,9 +263,15 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '0.8rem', color: '#92400e', marginBottom: '0.2rem' }}>极限湿球温度 (体感)</div>
+                <div style={{ fontSize: '0.8rem', color: '#92400e', marginBottom: '0.2rem' }}>体感温度 (AT)</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#b45309', opacity: 0.8 }}>
-                  {result.twMaxRange[0]} ~ {result.twMaxRange[1]} ℃
+                  {result.atRange[0]} ~ {result.atRange[1]} ℃
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: '#92400e', marginBottom: '0.2rem' }}>露点 (闷热指标)</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600, color: result.dewPointRange[1] >= 20 ? '#dc2626' : '#b45309', opacity: 0.8 }}>
+                  {result.dewPointRange[0]} ~ {result.dewPointRange[1]} ℃
                 </div>
               </div>
             </div>

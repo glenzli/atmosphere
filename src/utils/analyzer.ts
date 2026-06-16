@@ -10,6 +10,54 @@ export function calculateWetBulbTemperature(T: number, RH: number): number {
     0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH) - 4.686035;
 }
 
+/**
+ * 饱和水汽压 (hPa)，Magnus-Tetens 公式
+ * @param T 干球温度 (°C)
+ */
+export function saturatedVaporPressure(T: number): number {
+  return 6.105 * Math.exp((17.27 * T) / (237.7 + T));
+}
+
+/**
+ * 实际水汽压 (hPa)
+ * @param T 干球温度 (°C)
+ * @param RH 相对湿度 (%)
+ */
+export function actualVaporPressure(T: number, RH: number): number {
+  return (RH / 100) * saturatedVaporPressure(T);
+}
+
+/**
+ * 露点温度 (°C)，Magnus 逆公式
+ * 露点比 RH 更能反映"闷/黏/干"的真实体感：
+ *   Td ≥ 20°C → 非常闷热黏腻
+ *   Td 16-20°C → 开始有闷感
+ *   Td 9-15°C → 舒适清爽
+ *   Td < 5°C → 干燥，容易鼻干眼干
+ * @param T 干球温度 (°C)
+ * @param RH 相对湿度 (%)
+ */
+export function dewPoint(T: number, RH: number): number {
+  const clampedRH = Math.max(RH, 1); // 防止 log(0)
+  const gamma = Math.log(clampedRH / 100) + (17.625 * T) / (243.04 + T);
+  return (243.04 * gamma) / (17.625 - gamma);
+}
+
+/**
+ * 室外体感温度 AT (°C)
+ * 来源: Australian Bureau of Meteorology
+ * AT = T + 0.33e - 0.70v - 4.0
+ * 综合了温度、水汽压、风速对人体散热的影响
+ * @param T 干球温度 (°C)
+ * @param RH 相对湿度 (%)
+ * @param windKmh 风速 (km/h)
+ */
+export function apparentTemperature(T: number, RH: number, windKmh: number): number {
+  const e = actualVaporPressure(T, RH);
+  const v = Math.max(windKmh / 3.6, 0.5); // km/h → m/s, floor 0.5 to avoid div issues
+  return T + 0.33 * e - 0.70 * v - 4.0;
+}
+
 export interface PreferenceConfig {
   hate_heat: boolean;
   hate_cold: boolean;
@@ -35,7 +83,7 @@ export function evaluateLivability(
   _twAvg: number, // Unused but kept for signature compatibility
   twMax: number, 
   rhAvg: number,
-  rhMin: number,
+  _rhMin: number, // Kept for signature compatibility; humidity now assessed via dew point
   windMax: number,
   precipAvg: number,
   PM25: number = 0,
@@ -70,27 +118,33 @@ export function evaluateLivability(
   else if (dtr >= 15) score -= 20;
   else if (dtr >= 12) score -= 10;
   
-  // D1. 干燥不适 (急性物理伤害，容易流鼻血/咽喉炎)
-  let dryPenalty = 0;
-  if (rhMin <= 15) { dryPenalty = 30; } // 沙漠级极度干燥
-  else if (rhMin <= 20) { dryPenalty = 15; }
-  
-  // D2. 潮湿不适 (慢性体感/情绪伤害，发霉/粘腻)
-  let dampPenalty = 0;
-  if (tAvg <= 10 && rhAvg >= 80) { dampPenalty = 40; } // 极致湿冷魔法攻击
-  else if (tAvg <= 10 && rhAvg >= 75) { dampPenalty = 20; }
-  else if (tAvg >= 15 && tAvg <= 25 && rhAvg >= 85) { dampPenalty = 20; } // 连阴发霉/回南天 (非致命，仅降低舒适度)
-  else if (tAvg >= 15 && rhAvg >= 80) { dampPenalty = 10; } // 潮湿
+  // D. 基于露点的湿度舒适度评估
+  // 露点比 RH 更精准反映"闷/黏/干"的真实体感
+  // 参考: ASHRAE 55, Australian BOM, GPT thermal comfort research
+  const td = dewPoint(tAvg, rhAvg);
+  let humidityPenalty = 0;
 
-  if (preference.sensitive) {
-    dryPenalty *= 2.0; // 敏感体质对干燥（流鼻血/呼吸道刺激）反应剧烈，双倍惩罚
-    dampPenalty *= 1.2; // 敏感体质对潮湿（不舒服）仅轻微放大
+  // D1. 闷热黏腻（露点 ≥ 16°C 开始闷，≥ 20°C 极其难受）
+  //     当 tAvg < 15°C 时，高露点对体感的"闷"效应很小，
+  //     此时交给 D2 湿冷模块处理
+  if (tAvg >= 15) {
+    humidityPenalty += 4 * Math.max(0, td - 16);  // 每超过 16°C 扣 4 分
   }
 
-  if (dryPenalty >= 40) isExtreme = true; 
-  if (dampPenalty >= 40) isExtreme = true; 
+  // D2. 湿冷魔法攻击（低温+高湿，水汽导热快，刺骨阴冷）
+  if (tAvg <= 10 && rhAvg >= 80) { humidityPenalty += 40; }
+  else if (tAvg <= 10 && rhAvg >= 75) { humidityPenalty += 20; }
+
+  // D3. 极度干燥（露点 < 5°C 时干裂流鼻血）
+  humidityPenalty += 2 * Math.max(0, 5 - td);  // 每低于 5°C 扣 2 分
+
+  if (preference.sensitive) {
+    humidityPenalty *= 1.5; // 敏感体质对湿度不适放大 50%
+  }
+
+  if (humidityPenalty >= 40) isExtreme = true;
   
-  score -= (dryPenalty + dampPenalty);
+  score -= humidityPenalty;
   
   // E. 降雨极端天气
   if (precipAvg >= 50) { score -= 60; isExtreme = true; } // 暴雨 (极度影响出行，一票否决)

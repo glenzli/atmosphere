@@ -94,6 +94,10 @@ export function generatePrediction(
   const rhLow = getPercentile(allDays, 'rhAvg', 0.2);
   const twMaxHigh = getPercentile(allDays, 'twMax', 0.8);
   const twMaxLow = getPercentile(allDays, 'twMax', 0.2);
+  const atHigh = getPercentile(allDays, 'at', 0.8);
+  const atLow = getPercentile(allDays, 'at', 0.2);
+  const tdHigh = getPercentile(allDays, 'dewPoint', 0.8);
+  const tdLow = getPercentile(allDays, 'dewPoint', 0.2);
 
   // 极端灾害概率
   let rainWeight = 0;
@@ -129,6 +133,8 @@ export function generatePrediction(
     tMinRange: [Math.round(tMinLow), Math.round(tMinHigh)],
     rhRange: [Math.round(rhLow), Math.round(rhHigh)],
     twMaxRange: [Math.round(twMaxLow), Math.round(twMaxHigh)],
+    atRange: [Math.round(atLow), Math.round(atHigh)],
+    dewPointRange: [Math.round(tdLow), Math.round(tdHigh)],
     precipExpected: Number(expectedDailyPrecip.toFixed(1)),
     precipScale,
     pm25Expected: Math.round(totalPm25 / totalWeight),
