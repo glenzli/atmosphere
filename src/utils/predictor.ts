@@ -103,6 +103,7 @@ export function generatePrediction(
   let rainWeight = 0;
   let typhoonWeight = 0;
   let heatWeight = 0;
+  let heatStressWeight = 0;
   let coldWeight = 0;
   let smogWeight = 0;
   let severeSmogWeight = 0;
@@ -115,6 +116,7 @@ export function generatePrediction(
     if (d.precipAvg >= 50) rainWeight += d.weight;
     if (d.windMax >= 62) typhoonWeight += d.weight;
     if (d.tMax >= 35 || d.twMax >= 27) heatWeight += d.weight;
+    if (d.twMax >= 26) heatStressWeight += d.weight;
     if (d.tAvg <= 5 || d.tMin <= 0) coldWeight += d.weight;
     if (d.pm25Avg >= 75) smogWeight += d.weight;
     if (d.pm25Avg >= 150) severeSmogWeight += d.weight;
@@ -142,6 +144,7 @@ export function generatePrediction(
     severeRainProb: Math.round((rainWeight / totalWeight) * 100),
     typhoonProb: Math.round((typhoonWeight / totalWeight) * 100),
     heatProb: Math.round((heatWeight / totalWeight) * 100),
+    heatStressProb: Math.round((heatStressWeight / totalWeight) * 100),
     coldProb: Math.round((coldWeight / totalWeight) * 100),
     smogProb: Math.round((smogWeight / totalWeight) * 100),
     severeSmogProb: Math.round((severeSmogWeight / totalWeight) * 100),

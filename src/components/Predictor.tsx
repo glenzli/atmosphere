@@ -319,8 +319,20 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
                 <span style={{ color: '#991b1b', fontSize: '0.95rem' }}>❄️ 遭遇寒冷预警</span>
                 <span style={{ fontWeight: 600, color: result.coldProb > 10 ? '#dc2626' : '#991b1b' }}>{result.coldProb}%</span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#991b1b', fontSize: '0.95rem' }}>🥵 热应激风险 (Tw≥26°C)</span>
+                <span style={{ fontWeight: 600, color: result.heatStressProb > 20 ? '#dc2626' : '#991b1b' }}>{result.heatStressProb}%</span>
+              </div>
             </div>
-            {(result.typhoonProb > 15 || result.severeRainProb > 15 || result.heatProb > 15 || result.coldProb > 15) && (
+            {result.heatStressProb > 0 && (
+              <div style={{ fontSize: '0.8rem', color: '#92400e', background: '#fef3c7', padding: '0.5rem', borderRadius: '4px' }}>
+                💡 湿球温度区间: <strong>{result.twMaxRange[0]}~{result.twMaxRange[1]}°C</strong>
+                {result.twMaxRange[1] >= 28 ? ' — 汗液蒸发严重受阻，户外活动极其危险' :
+                 result.twMaxRange[1] >= 24 ? ' — 蒸发散热受限，户外运动需控制强度' :
+                 ' — 蒸发散热正常'}
+              </div>
+            )}
+            {(result.typhoonProb > 15 || result.severeRainProb > 15 || result.heatProb > 15 || result.coldProb > 15 || result.heatStressProb > 30) && (
               <div style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: 'auto', background: '#fee2e2', padding: '0.5rem', borderRadius: '4px' }}>
                 提示：当前时期极端气候风险较高，建议准备应急预案。
               </div>
