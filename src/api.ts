@@ -5,8 +5,32 @@ export async function clearCache() {
   await clear();
 }
 
+async function translateCityName(name: string) {
+  if (!/[^\x00-\x7F]/.test(name)) return name;
+
+  try {
+    const params = new URLSearchParams({
+      q: name,
+      langpair: 'zh|en'
+    });
+    const res = await fetch(`https://api.mymemory.translated.net/get?${params}`);
+    if (!res.ok) return name;
+    const data = await res.json();
+    return data?.responseData?.translatedText || name;
+  } catch {
+    return name;
+  }
+}
+
 export async function geocodeCity(name: string) {
-  const res = await fetch(`/api/geocoding?name=${encodeURIComponent(name)}`);
+  const query = await translateCityName(name);
+  const params = new URLSearchParams({
+    name: query,
+    count: '1',
+    language: 'en',
+    format: 'json'
+  });
+  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`);
   if (!res.ok) throw new Error('Geocoding failed');
   const data = await res.json();
   if (!data.results || data.results.length === 0) throw new Error('City not found');
@@ -18,7 +42,7 @@ export async function fetchEnsoStatus() {
     const res = await fetch('/api/enso');
     if (!res.ok) throw new Error('Network error');
     return await res.json();
-  } catch (err) {
+  } catch {
     return { status: 'Neutral', value: 0, error: true };
   }
 }

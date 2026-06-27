@@ -28,14 +28,11 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
     setLoadingEnso(true);
     setFetchError(false);
     fetchEnsoStatus().then(res => {
-      // If network failed or NOAA timed out, we default to La Niña for 2025/2026 as a sensible fallback, or Neutral
       const isError = res.error === true;
       setFetchError(isError);
       
-      if (res.status === 'El Niño' || res.status === 'La Niña' || res.status === 'Neutral') {
-        // If it's an error, let's just default to La Niña for the upcoming 2025/2026 phase for demonstration,
-        // or just keep Neutral if user prefers. We'll default to La Niña if error, since we are heading into one.
-        setEnsoStatus(isError ? 'La Niña' : res.status as EnsoStatus);
+      if (!isError && (res.status === 'El Niño' || res.status === 'La Niña' || res.status === 'Neutral')) {
+        setEnsoStatus(res.status as EnsoStatus);
       }
       setRealValue(res.value);
       setLoadingEnso(false);
@@ -195,7 +192,7 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
                     outline: 'none',
                     transition: 'all 0.2s',
                   }}
-                  title={`当前 NOAA Nino 3.4 异常值: ${realValue.toFixed(2)}`}
+                  title={fetchError ? '自动获取失败，当前为手动选择模式' : `当前 NOAA Nino 3.4 异常值: ${realValue.toFixed(2)}`}
                 >
                   <option value="Neutral">中性 (Neutral)</option>
                   <option value="El Niño">厄尔尼诺 (El Niño)</option>
@@ -203,7 +200,7 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
                 </select>
                 {fetchError && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '6px' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>网络超时, 默认La Niña</span>
+                    <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>自动获取失败，请手动选择</span>
                     <button 
                       onClick={loadEnso}
                       style={{ 

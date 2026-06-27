@@ -5,33 +5,6 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Open-Meteo Geocoding
-app.get('/api/geocoding', async (req, res) => {
-  let { name } = req.query;
-  if (!name) return res.status(400).json({ error: 'City name is required' });
-  
-  try {
-    // Check for non-ASCII characters (like Chinese)
-    if (/[^\x00-\x7F]/.test(name as string)) {
-      try {
-        const transRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(name as string)}&langpair=zh|en`);
-        const transData = await transRes.json();
-        if (transData && transData.responseData && transData.responseData.translatedText) {
-          name = transData.responseData.translatedText;
-        }
-      } catch (e) {
-        console.warn('Translation failed, falling back to original name', e);
-      }
-    }
-
-    const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name as string)}&count=1&language=en&format=json`);
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch geocoding data' });
-  }
-});
-
 // ENSO Status Fetching
 app.get('/api/enso', async (req, res) => {
   try {

@@ -1,19 +1,6 @@
-export type EnsoStatus = 'El Niño' | 'La Niña' | 'Neutral';
+import { getHistoricalEnsoStatus, type EnsoStatus } from '../data/ensoYears';
 
-// 历史年份的宏观气候标签 (近似分类)
-const historicalEnso: Record<string, EnsoStatus> = {
-  '2014': 'Neutral',
-  '2015': 'El Niño',
-  '2016': 'El Niño',
-  '2017': 'La Niña', // Late 2017
-  '2018': 'Neutral',
-  '2019': 'El Niño',
-  '2020': 'La Niña',
-  '2021': 'La Niña',
-  '2022': 'La Niña',
-  '2023': 'El Niño',
-  '2024': 'El Niño',
-};
+export type { EnsoStatus };
 
 export function generatePrediction(
   dataMap: Record<string, any[]>,
@@ -35,7 +22,7 @@ export function generatePrediction(
   
   for (const [yearStr, days] of Object.entries(dataMap)) {
     const year = yearStr.replace('年', '');
-    const enso = historicalEnso[year] || 'Neutral';
+    const enso = getHistoricalEnsoStatus(year);
     
     // ENSO 同态提权 (如果历史年份和今年 ENSO 相同，权重放大)
     let weight = 1.0;
