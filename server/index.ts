@@ -32,39 +32,6 @@ app.get('/api/geocoding', async (req, res) => {
   }
 });
 
-// Open-Meteo Historical Weather (ERA5) & Air Quality
-app.get('/api/weather', async (req, res) => {
-  const { lat, lon, startDate, endDate } = req.query;
-  if (!lat || !lon || !startDate || !endDate) {
-    return res.status(400).json({ error: 'lat, lon, startDate, endDate are required' });
-  }
-
-  try {
-    const weatherUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max&hourly=temperature_2m,relative_humidity_2m&timezone=auto`;
-    const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&hourly=pm2_5&timezone=auto`;
-
-    const [weatherRes, aqiRes] = await Promise.all([fetch(weatherUrl), fetch(aqiUrl)]);
-    const data = await weatherRes.json();
-    let aqData: any = {};
-    
-    if (aqiRes.ok) {
-      aqData = await aqiRes.json();
-    }
-
-    if (data.hourly) {
-      if (aqData.hourly && aqData.hourly.pm2_5) {
-        data.hourly.pm2_5 = aqData.hourly.pm2_5;
-      } else {
-        data.hourly.pm2_5 = new Array(data.hourly.time.length).fill(null);
-      }
-    }
-
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch weather data' });
-  }
-});
-
 // ENSO Status Fetching
 app.get('/api/enso', async (req, res) => {
   try {

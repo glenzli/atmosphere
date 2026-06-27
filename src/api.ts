@@ -23,6 +23,66 @@ export async function fetchEnsoStatus() {
   }
 }
 
+function readPm25Hourly(data: unknown): unknown[] | null {
+  if (!data || typeof data !== 'object') return null;
+  const hourly = (data as { hourly?: unknown }).hourly;
+  if (!hourly || typeof hourly !== 'object') return null;
+  const pm25 = (hourly as { pm2_5?: unknown }).pm2_5;
+  return Array.isArray(pm25) ? pm25 : null;
+}
+
+async function fetchOpenMeteoWeather(lat: number, lon: number, startDate: string, endDate: string) {
+  const weatherParams = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    start_date: startDate,
+    end_date: endDate,
+    daily: 'temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max',
+    hourly: 'temperature_2m,relative_humidity_2m',
+    timezone: 'auto'
+  });
+
+  const airQualityParams = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    start_date: startDate,
+    end_date: endDate,
+    hourly: 'pm2_5',
+    timezone: 'auto'
+  });
+
+  const weatherUrl = `https://archive-api.open-meteo.com/v1/archive?${weatherParams}`;
+  const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?${airQualityParams}`;
+
+  const [weatherRes, airQualityRes] = await Promise.all([
+    fetch(weatherUrl),
+    fetch(airQualityUrl).catch(() => null)
+  ]);
+
+  if (!weatherRes.ok) throw new Error('Weather data fetch failed');
+
+  const data = await weatherRes.json();
+  let pm25Hourly: unknown[] | null = null;
+
+  if (airQualityRes?.ok) {
+    try {
+      pm25Hourly = readPm25Hourly(await airQualityRes.json());
+    } catch {
+      pm25Hourly = null;
+    }
+  }
+
+  if (data.hourly) {
+    if (pm25Hourly) {
+      data.hourly.pm2_5 = pm25Hourly;
+    } else {
+      data.hourly.pm2_5 = new Array(data.hourly.time.length).fill(null);
+    }
+  }
+
+  return data;
+}
+
 export async function fetchHistoricalData(lat: number, lon: number, years = 10) {
   const endDate = new Date();
   const startDate = new Date();
@@ -38,9 +98,7 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10) 
 
   if (!weatherData) {
     isCached = false;
-    const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}&startDate=${startStr}&endDate=${endStr}`);
-    if (!res.ok) throw new Error('Weather data fetch failed');
-    weatherData = await res.json();
+    weatherData = await fetchOpenMeteoWeather(lat, lon, startStr, endStr);
     await set(cacheKey, weatherData);
   }
 
