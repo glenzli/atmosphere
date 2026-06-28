@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  --bg-primary: #fafafa;
+  --bg-primary: #ffffff;
   --bg-card: #ffffff;
   --text-primary: #171717;
   --text-secondary: #737373;
@@ -58,23 +58,98 @@ select {
 }
 
 .header h1 {
-  font-size: 2.25rem;
-  font-weight: 600;
+  font-size: 2.45rem;
+  font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 0;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-bottom: 0.65rem;
+  padding: 0.18rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+}
+
+.language-option {
+  min-width: 4.3rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.42rem 0.65rem;
+}
+
+.language-option.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
 }
 
 .header p {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
+  color: #475569;
+  font-size: 1rem;
+  font-weight: 500;
+  max-width: min(100%, 680px);
+  margin: 0 auto;
+  overflow-wrap: anywhere;
+}
+
+.pref-label-short {
+  display: none;
+}
+
+.preference-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  width: fit-content;
+  margin: 1rem auto 0;
+  padding: 0.6rem 1.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.preference-title {
+  font-size: 0.9rem;
+  color: #475569;
+  font-weight: 700;
+}
+
+.preference-option {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.preference-option input {
+  cursor: pointer;
 }
 
 .search-bar {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.search-controls {
   display: flex;
   gap: 0.75rem;
   justify-content: center;
-  margin-bottom: 1rem;
+  width: 100%;
 }
 
 .input-field {
@@ -111,6 +186,11 @@ select {
 
 .btn:hover {
   background: var(--accent-hover);
+}
+
+.search-btn-icon {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .btn-secondary {
@@ -259,7 +339,7 @@ select {
 @media (max-width: 960px) {
   .app-container {
     max-width: 100%;
-    padding: 2rem 1rem 6rem;
+    padding: 2.25rem 1rem 6rem;
     gap: 1.25rem;
   }
 
@@ -273,12 +353,16 @@ select {
     justify-content: flex-start !important;
     gap: 0.7rem !important;
     padding: 0.75rem !important;
+    background: #f8fafc !important;
   }
 
   .search-bar {
+    margin-bottom: 0.75rem;
+  }
+
+  .search-controls {
     flex-wrap: wrap;
     align-items: stretch;
-    margin-bottom: 0.75rem;
   }
 
   .input-field {
@@ -453,7 +537,7 @@ select {
 
 @media (max-width: 640px) {
   .app-container {
-    padding: 1rem 0.75rem 6rem;
+    padding: 1.35rem 0.75rem 6rem;
     gap: 1rem;
   }
 
@@ -462,53 +546,137 @@ select {
   }
 
   .header h1 {
-    font-size: 1.75rem;
+    font-size: 1.85rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .language-switch {
+    margin-bottom: 0.55rem;
+  }
+
+  .language-option {
+    min-width: 3.8rem;
+    font-size: 0.78rem;
+    padding: 0.38rem 0.55rem;
   }
 
   .header p {
     font-size: 0.88rem;
     line-height: 1.5;
+    max-width: 20rem;
+    word-break: break-all;
+    white-space: normal;
   }
 
   .preference-panel > span {
-    width: 100%;
+    grid-column: 1 / -1;
+    width: auto;
+    flex: initial;
+    text-align: center;
+  }
+
+  .preference-panel {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem !important;
+    padding: 0.5rem !important;
+    width: min(100%, 22rem) !important;
+    max-width: 22rem !important;
+    margin: 1rem 0 0 !important;
+    overflow: visible;
   }
 
   .preference-option {
-    flex: 1 1 calc(50% - 0.5rem);
-    min-width: 145px;
+    position: relative;
+    width: auto !important;
+    min-width: 0;
+    max-width: none;
     justify-content: center;
-    padding: 0.45rem 0.55rem;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    gap: 0 !important;
+    padding: 0.52rem 0.25rem;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 10px;
+    color: #475569 !important;
+    font-size: 0.8rem !important;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+    white-space: nowrap;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .preference-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .preference-option.active {
+    background: #111827 !important;
+    border-color: #111827;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  }
+
+  .pref-label-full {
+    display: none;
+  }
+
+  .pref-label-short {
+    display: inline;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .search-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px 44px;
+    gap: 0.5rem;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .search-controls .input-field {
+    grid-column: auto;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .search-controls .btn {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
     border-radius: 8px;
   }
 
-  .search-bar {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0.5rem;
+  .search-btn-label {
+    display: none;
   }
 
-  .search-bar .input-field {
-    grid-column: 1 / -1;
-  }
-
-  .search-bar .btn {
-    padding: 0.6rem 0.9rem;
+  .search-btn-icon {
+    display: block;
   }
 
   .recent-searches {
     justify-content: flex-start !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto;
+    flex-wrap: wrap !important;
+    overflow-x: visible;
     margin-top: -0.25rem !important;
     padding-bottom: 0.25rem;
-    -webkit-overflow-scrolling: touch;
+    row-gap: 0.45rem;
   }
 
   .recent-chip {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    max-width: 100%;
   }
 
   .city-title {

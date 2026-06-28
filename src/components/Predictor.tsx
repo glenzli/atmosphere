@@ -145,7 +145,7 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
               options={{
                 mode: 'range',
                 dateFormat: 'Y-m-d',
-                locale: i18n.language.startsWith('zh') ? Mandarin : undefined,
+                ...(i18n.language.startsWith('zh') ? { locale: Mandarin } : {}),
                 defaultDate: [startDate, endDate],
               }}
               onChange={(dates) => {

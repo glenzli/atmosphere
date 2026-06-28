@@ -7,6 +7,7 @@ import { geocodeCity, fetchHistoricalData, clearCache } from './api';
 import { applyLivabilityPreference, type PreferenceConfig, defaultPreference } from './utils/analyzer';
 import { Predictor } from './components/Predictor';
 import { formatLivability, formatSeason, formatYearLabel } from './i18n/format';
+import { Play, Settings } from 'lucide-react';
 import './index.css';
 
 export default function App() {
@@ -125,83 +126,88 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem' }}>
-          <h1>Atmosphere</h1>
+        <h1>Atmosphere</h1>
+        <div className="language-switch" role="group" aria-label={t('language.aria')}>
           <button
             type="button"
-            onClick={() => i18n.changeLanguage(i18n.language.startsWith('zh') ? 'en-US' : 'zh-CN')}
-            aria-label={t('language.aria')}
-            title={t('language.aria')}
-            style={{
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              color: '#334155',
-              padding: '0.35rem 0.65rem',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              lineHeight: 1,
-            }}
+            className={`language-option ${i18n.language.startsWith('zh') ? 'active' : ''}`}
+            onClick={() => i18n.changeLanguage('zh-CN')}
           >
-            {t('language.switchTo')}
+            中文
+          </button>
+          <button
+            type="button"
+            className={`language-option ${i18n.language.startsWith('en') ? 'active' : ''}`}
+            onClick={() => i18n.changeLanguage('en-US')}
+          >
+            English
           </button>
         </div>
         <p>{t('app.tagline')}</p>
-        <div className="preference-panel" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', background: '#f8fafc', padding: '0.6rem 1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: 'fit-content', margin: '1rem auto 0' }}>
-          <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 'bold' }}>{t('app.preferenceLabel')}</span>
+        <div className="preference-panel">
+          <span className="preference-title">{t('app.preferenceLabel')}</span>
           
-          <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+          <label className={`preference-option ${preference.hate_heat ? 'active' : ''}`}>
             <input 
               type="checkbox" 
               checked={preference.hate_heat}
               onChange={e => setPreference({ ...preference, hate_heat: e.target.checked })}
-              style={{ cursor: 'pointer' }}
             />
-            {t('app.prefHeat')}
+            <span className="pref-label-full">{t('app.prefHeat')}</span>
+            <span className="pref-label-short">{t('app.prefHeatShort')}</span>
           </label>
           
-          <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+          <label className={`preference-option ${preference.hate_cold ? 'active' : ''}`}>
             <input 
               type="checkbox" 
               checked={preference.hate_cold}
               onChange={e => setPreference({ ...preference, hate_cold: e.target.checked })}
-              style={{ cursor: 'pointer' }}
             />
-            {t('app.prefCold')}
+            <span className="pref-label-full">{t('app.prefCold')}</span>
+            <span className="pref-label-short">{t('app.prefColdShort')}</span>
           </label>
           
-          <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+          <label className={`preference-option ${preference.sensitive ? 'active' : ''}`}>
             <input 
               type="checkbox" 
               checked={preference.sensitive}
               onChange={e => setPreference({ ...preference, sensitive: e.target.checked })}
-              style={{ cursor: 'pointer' }}
             />
-            {t('app.prefSensitive')}
+            <span className="pref-label-full">{t('app.prefSensitive')}</span>
+            <span className="pref-label-short">{t('app.prefSensitiveShort')}</span>
           </label>
         </div>
       </header>
 
       <form onSubmit={handleSearch} className="search-bar">
-        <input
-          type="text"
-          className="input-field"
-          placeholder={t('app.cityPlaceholder')}
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-        />
-        <button type="submit" className="btn" disabled={loading}>
-          {loading ? t('app.analyzing') : t('app.start')}
-        </button>
-        <button 
-          type="button" 
-          className="btn btn-secondary" 
-          onClick={() => setShowConfig(true)}
-          title={t('app.configTitle')}
-        >
-          ⚙️
-        </button>
+        <div className="search-controls">
+          <input
+            type="text"
+            className="input-field"
+            placeholder={t('app.cityPlaceholder')}
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="btn search-submit"
+            disabled={loading}
+            aria-label={loading ? t('app.analyzing') : t('app.start')}
+            title={loading ? t('app.analyzing') : t('app.start')}
+          >
+            <Play className="search-btn-icon" size={18} strokeWidth={2.4} aria-hidden="true" />
+            <span className="search-btn-label">{loading ? t('app.analyzing') : t('app.start')}</span>
+          </button>
+          <button 
+            type="button" 
+            className="btn btn-secondary config-button" 
+            onClick={() => setShowConfig(true)}
+            aria-label={t('app.configTitle')}
+            title={t('app.configTitle')}
+          >
+            <Settings size={18} strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        </div>
       </form>
 
       {recentCities.length > 0 && (
