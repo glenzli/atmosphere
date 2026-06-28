@@ -1,11 +1,14 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface Props {
   dataMap: Record<string, any[]>;
 }
 
 export const TrendChart: React.FC<Props> = ({ dataMap }) => {
+  const isMobile = useMediaQuery('(max-width: 640px)');
+
   const option = useMemo(() => {
     if (!dataMap || Object.keys(dataMap).length === 0) return {};
 
@@ -71,35 +74,37 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
 
     const totalLivable = livableData.level1.map((v, i) => v + livableData.level2[i]);
     const totalUnlivable = livableData.level3.map((v, i) => v + livableData.level4[i]);
+    const axisLabel = { color: '#64748b', fontSize: isMobile ? 10 : 12 };
 
     return {
       title: [
-        { text: '十年气候变迁宏观趋势', left: 'center', top: 0, textStyle: { color: '#0f172a', fontSize: 16 } },
-        { text: '📅 四季时长演变 (天)', left: '4%', top: '6%', textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' } },
-        { text: '🏡 宜居/恶劣天数结构 (天)', left: '4%', top: '53%', textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' } }
+        { text: '十年气候变迁宏观趋势', left: 'center', top: 0, textStyle: { color: '#0f172a', fontSize: isMobile ? 14 : 16 } },
+        { text: '📅 四季时长演变 (天)', left: isMobile ? '8%' : '4%', top: isMobile ? '7%' : '6%', textStyle: { fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 'normal' } },
+        { text: '🏡 宜居/恶劣天数结构 (天)', left: isMobile ? '8%' : '4%', top: isMobile ? '55%' : '53%', textStyle: { fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 'normal' } }
       ],
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' },
+        confine: true,
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderColor: '#e2e8f0',
         textStyle: { color: '#0f172a' }
       },
       legend: [
-        { data: ['春季', '夏季', '秋季', '冬季', '高温预警', '寒冷预警'], top: '6%', right: '4%' },
-        { data: ['极度舒适', '尚可接受', '全年宜居期', '较不宜居', '极端恶劣', '全年恶劣期'], top: '53%', right: '4%', type: 'scroll', width: '60%' }
+        { data: ['春季', '夏季', '秋季', '冬季', '高温预警', '寒冷预警'], top: isMobile ? '11%' : '6%', left: isMobile ? '8%' : undefined, right: isMobile ? '4%' : '4%', type: isMobile ? 'scroll' : undefined, width: isMobile ? '88%' : undefined },
+        { data: ['极度舒适', '尚可接受', '全年宜居期', '较不宜居', '极端恶劣', '全年恶劣期'], top: isMobile ? '59%' : '53%', left: isMobile ? '8%' : undefined, right: '4%', type: 'scroll', width: isMobile ? '88%' : '60%' }
       ],
       grid: [
-        { left: '4%', right: '4%', top: '15%', height: '30%' }, // Seasons Grid
-        { left: '4%', right: '4%', top: '62%', height: '30%' }  // Livability Grid
+        { left: isMobile ? '9%' : '4%', right: '4%', top: isMobile ? '20%' : '15%', height: isMobile ? '25%' : '30%' },
+        { left: isMobile ? '9%' : '4%', right: '4%', top: isMobile ? '68%' : '62%', height: isMobile ? '24%' : '30%' }
       ],
       xAxis: [
-        { type: 'category', data: xAxisData, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } } },
-        { type: 'category', data: xAxisData, gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } } }
+        { type: 'category', data: xAxisData, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel },
+        { type: 'category', data: xAxisData, gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel }
       ],
       yAxis: [
-        { type: 'value', gridIndex: 0, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
-        { type: 'value', gridIndex: 1, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } }
+        { type: 'value', gridIndex: 0, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel },
+        { type: 'value', gridIndex: 1, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel }
       ],
       series: [
         // Grid 0: Seasons
@@ -122,10 +127,10 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
         { name: '全年恶劣期', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalUnlivable, itemStyle: { color: '#b91c1c' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 }
       ]
     };
-  }, [dataMap]);
+  }, [dataMap, isMobile]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '600px' }}>
+    <div className="trend-chart" style={{ position: 'relative', width: '100%', height: '600px' }}>
       <ReactECharts
         option={option}
         style={{ height: '100%', width: '100%' }}

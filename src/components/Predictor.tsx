@@ -127,16 +127,17 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
   };
 
   return (
-    <div className="card" style={{ padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div className="card predictor-card" style={{ padding: '2rem' }}>
+      <div className="predictor-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.4rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span>🔮</span> {cityName} 旅行气候预测
         </h2>
         
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem', borderRadius: '8px' }}>
+        <div className="predictor-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div className="predictor-control" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem', borderRadius: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#475569' }}>出行日期:</span>
             <Flatpickr
+              className="predictor-date-input"
               options={{
                 mode: 'range',
                 dateFormat: 'Y-m-d',
@@ -170,7 +171,7 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem', borderRadius: '8px' }}>
+          <div className="predictor-control" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem', borderRadius: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#475569' }}>今年宏观气候:</span>
             {loadingEnso ? <span style={{ fontSize: '0.8rem' }}>获取中...</span> : (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -224,9 +225,9 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
       {!result ? (
         <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>日期格式有误或数据不足</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="predictor-results" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1.2rem', borderRadius: '12px', color: '#334155', lineHeight: '1.6' }}>
+          <div className="predictor-summary" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1.2rem', borderRadius: '12px', color: '#334155', lineHeight: '1.6' }}>
             <div style={{ fontSize: '1.05rem', marginBottom: '1rem' }}>
               {getFeelsLikeText(result)}
             </div>
@@ -240,9 +241,9 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          <div className="predictor-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
           
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="predictor-metric-card" style={{ background: '#fffbeb', border: '1px solid #fde68a', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h3 style={{ margin: 0, color: '#d97706', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               🌡️ 气温与体感展望
             </h3>
@@ -252,7 +253,7 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
                 {result.tMaxRange[0]}<span style={{ fontSize: '1.2rem', color: '#d97706', margin: '0 4px' }}>~</span>{result.tMaxRange[1]}<span style={{ fontSize: '1.2rem' }}>℃</span>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="metric-row" style={{ display: 'flex', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: '0.8rem', color: '#92400e', marginBottom: '0.2rem' }}>夜间最低温</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#b45309', opacity: 0.8 }}>
@@ -274,7 +275,7 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
             </div>
           </div>
 
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="predictor-metric-card" style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h3 style={{ margin: 0, color: '#2563eb', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               🌧️ 降水概率推演
             </h3>
@@ -295,7 +296,7 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
             </div>
           </div>
 
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="predictor-metric-card" style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h3 style={{ margin: 0, color: '#dc2626', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               ⚠️ 极端灾害排雷
             </h3>
@@ -336,7 +337,7 @@ export function Predictor({ dataMap, cityName }: PredictorProps) {
             )}
           </div>
 
-          <div style={{ background: '#fdf4ff', border: '1px solid #f5d0fe', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="predictor-metric-card" style={{ background: '#fdf4ff', border: '1px solid #f5d0fe', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h3 style={{ margin: 0, color: '#a21caf', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               😷 空气质量研判
             </h3>

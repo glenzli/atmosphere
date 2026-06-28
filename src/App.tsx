@@ -124,10 +124,10 @@ export default function App() {
       <header className="header">
         <h1>Atmosphere</h1>
         <p>输入全球任意城市，基于过去10年气象数据推演真实体感宜居度</p>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', background: '#f8fafc', padding: '0.6rem 1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: 'fit-content', margin: '1rem auto 0' }}>
+        <div className="preference-panel" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', background: '#f8fafc', padding: '0.6rem 1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: 'fit-content', margin: '1rem auto 0' }}>
           <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 'bold' }}>体质偏好叠加:</span>
           
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+          <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
             <input 
               type="checkbox" 
               checked={preference.hate_heat}
@@ -137,7 +137,7 @@ export default function App() {
             ❄️ 怕热 (避暑)
           </label>
           
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+          <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
             <input 
               type="checkbox" 
               checked={preference.hate_cold}
@@ -147,7 +147,7 @@ export default function App() {
             🔥 怕冷 (避寒)
           </label>
           
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
+          <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
             <input 
               type="checkbox" 
               checked={preference.sensitive}
@@ -181,10 +181,10 @@ export default function App() {
       </form>
 
       {recentCities.length > 0 && (
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: '-1rem', marginBottom: '1rem' }}>
+        <div className="recent-searches" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: '-1rem', marginBottom: '1rem' }}>
           <span style={{ fontSize: '0.8rem', color: '#64748b' }}>最近搜索：</span>
           {recentCities.map(c => (
-            <div key={c} style={{ 
+            <div key={c} className="recent-chip" style={{
               display: 'flex', alignItems: 'center', gap: '0.3rem', 
               background: '#f1f5f9', padding: '0.2rem 0.6rem', 
               borderRadius: '999px', fontSize: '0.85rem', color: '#334155' 
@@ -223,9 +223,9 @@ export default function App() {
       {dataMap && cityInfo && (
         <div className="dashboard" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <div className="city-title-row" style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
+              <h2 className="city-title" style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <span>{cityInfo.name} <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 'normal' }}>{cityInfo.country}</span></span>
                 {compareCities.findIndex(c => c.name === cityInfo.name) === -1 && (
                   <button 
@@ -242,8 +242,9 @@ export default function App() {
               </h2>
             </div>
             
-            <div style={{ display: 'flex', gap: '0.2rem', background: '#e2e8f0', padding: '0.35rem', borderRadius: '10px' }}>
+            <div className="view-tabs" style={{ display: 'flex', gap: '0.2rem', background: '#e2e8f0', padding: '0.35rem', borderRadius: '10px' }}>
               <button
+                className="view-tab"
                 onClick={() => setViewMode('daily')}
                 style={{
                   padding: '0.4rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
@@ -254,6 +255,7 @@ export default function App() {
                 }}
               >👁 逐年气象细察</button>
               <button
+                className="view-tab"
                 onClick={() => setViewMode('trend')}
                 style={{
                   padding: '0.4rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
@@ -264,6 +266,7 @@ export default function App() {
                 }}
               >📈 宏观十年趋势</button>
               <button
+                  className="view-tab"
                   onClick={() => setViewMode('compare')}
                   style={{
                     padding: '0.4rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
@@ -274,6 +277,7 @@ export default function App() {
                   }}
                 >⚔️ 跨城对比 PK</button>
               <button
+                className="view-tab"
                 onClick={() => setViewMode('predict')}
                 style={{
                   padding: '0.4rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
@@ -292,12 +296,13 @@ export default function App() {
 
           {viewMode === 'daily' && (
             <>
-              <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+              <div className="card year-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="year-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
                   <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#334155' }}>年份详情</div>
-                  <div style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '8px' }}>
+                  <div className="year-tabs" style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '8px' }}>
                     {Object.keys(dataMap).map(year => (
                       <button
+                        className="year-tab"
                         key={year}
                         onClick={() => setSelectedYear(year)}
                         style={{
@@ -313,12 +318,12 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'stretch' }}>
-                  <div className="stat-group" style={{ flex: '0 0 auto', width: '380px', display: 'flex', flexDirection: 'column' }}>
+                <div className="stats-layout" style={{ display: 'flex', gap: '1.5rem', alignItems: 'stretch' }}>
+                  <div className="stat-group season-stat-group" style={{ flex: '0 0 auto', width: '380px', display: 'flex', flexDirection: 'column' }}>
                     <h3 style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span>📅 四季时长分布</span>
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', flex: 1 }}>
+                    <div className="season-stat-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', flex: 1 }}>
                       {[
                         { label: '春季', count: seasonStats['春季'], color: '#10b981', bg: '#ecfdf5', sub: '' },
                         { label: '夏季', count: seasonStats['夏季'], color: '#ef4444', bg: '#fef2f2', sub: severeStats.summer > 0 ? `含高温预警: ${severeStats.summer}天` : '' },
@@ -336,12 +341,12 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="stat-group" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div className="stat-group livability-stat-group" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <h3 style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span>🏡 极值宜居模型评估</span>
                     </h3>
-                    <div style={{ display: 'flex', gap: '1rem', flex: 1 }}>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div className="livability-layout" style={{ display: 'flex', gap: '1rem', flex: 1 }}>
+                      <div className="livability-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ flex: 1, background: '#ecfdf5', padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#059669', fontWeight: 'bold', fontSize: '0.85rem' }}>全年宜居期</span>
                           <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#047857' }}>{livableStats.level1 + livableStats.level2} <span style={{fontSize: '0.7rem', fontWeight: 'normal'}}>天</span></span>
@@ -358,7 +363,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div className="livability-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ flex: 1, background: '#fef2f2', padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#dc2626', fontWeight: 'bold', fontSize: '0.85rem' }}>全年恶劣期</span>
                           <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#b91c1c' }}>{livableStats.level3 + livableStats.level4} <span style={{fontSize: '0.7rem', fontWeight: 'normal'}}>天</span></span>
@@ -379,16 +384,18 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="card">
-                <div className="chart-container">
-                  {activeData && <ClimateChart data={activeData} />}
+              <div className="card chart-card">
+                <div className="chart-scroll">
+                  <div className="chart-container">
+                    {activeData && <ClimateChart data={activeData} />}
+                  </div>
                 </div>
               </div>
             </>
           )}
 
           {viewMode === 'trend' && (
-            <div className="card">
+            <div className="card trend-card">
               <TrendChart dataMap={dataMap} />
             </div>
           )}
@@ -400,7 +407,7 @@ export default function App() {
       )}
 
       {compareCities.length > 0 && (
-        <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', background: 'white', padding: '1rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', zIndex: 50, border: '1px solid #e2e8f0', minWidth: '250px' }}>
+        <div className="compare-tray" style={{ position: 'fixed', bottom: '2rem', right: '2rem', background: 'white', padding: '1rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', zIndex: 50, border: '1px solid #e2e8f0', minWidth: '250px' }}>
           <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
             <span>⚔️ 跨城对比托盘</span>
             <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{compareCities.length}/8</span>

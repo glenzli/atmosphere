@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface ClimateData {
   date: string;
@@ -32,7 +33,20 @@ interface Props {
   data: ClimateData[];
 }
 
+type MobileClimateMode = 'overview' | 'thermal' | 'water' | 'air' | 'risk';
+
+const mobileClimateModes: Array<{ key: MobileClimateMode; label: string }> = [
+  { key: 'overview', label: '概览' },
+  { key: 'thermal', label: '体感' },
+  { key: 'water', label: '水汽' },
+  { key: 'air', label: '空气' },
+  { key: 'risk', label: '灾害' },
+];
+
 export const ClimateChart: React.FC<Props> = ({ data }) => {
+  const isMobile = useMediaQuery('(max-width: 640px)');
+  const [mobileMode, setMobileMode] = useState<MobileClimateMode>('overview');
+
   const option = useMemo(() => {
     if (!data || data.length === 0) return {};
 
@@ -133,60 +147,531 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
     const temperatureMarkAreas = [...markAreas, ...severeSummerAreas, ...severeWinterAreas];
 
     const rainySeasonAreas = createMarkAreas('isRainySeason', 'rgba(186, 230, 253, 0.5)');
+    const sectionTitleSize = isMobile ? 11 : 13;
+    const chartTitleSize = isMobile ? 14 : 16;
+    const axisLabelStyle = { color: '#64748b', fontSize: isMobile ? 10 : 12, margin: isMobile ? 3 : 8 };
+    const dateAxisLabel = isMobile
+      ? {
+          ...axisLabelStyle,
+          formatter: (value: string) => value.endsWith('-01') ? `${Number(value.slice(0, 2))}月` : ''
+        }
+      : axisLabelStyle;
+    const grid = isMobile ? [
+      { left: '12%', right: '4%', top: '8%', height: '18%' },
+      { left: '12%', right: '4%', top: '31%', height: '15%' },
+      { left: '12%', right: '4%', top: '51%', height: '10%' },
+      { left: '12%', right: '4%', top: '64%', height: '7%' },
+      { left: '12%', right: '4%', top: '75%', height: '7%' },
+      { left: '12%', right: '4%', top: '96%', height: '3%' },
+      { left: '12%', right: '4%', top: '87%', height: '5%' }
+    ] : [
+      { left: '4%', right: '4%', top: '4%', height: '22%' },
+      { left: '4%', right: '4%', top: '29%', height: '18%' },
+      { left: '4%', right: '4%', top: '50%', height: '10%' },
+      { left: '4%', right: '4%', top: '63%', height: '8%' },
+      { left: '4%', right: '4%', top: '74%', height: '7%' },
+      { left: '4%', right: '4%', top: '96%', height: '3%' },
+      { left: '4%', right: '4%', top: '88%', height: '5%' }
+    ];
+
+    const tooltip = {
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e2e8f0',
+      textStyle: { color: '#0f172a' },
+      formatter: (params: any) => {
+        let html = `<div style="margin-bottom:4px;font-weight:bold;border-bottom:1px solid #cbd5e1;padding-bottom:4px">${params[0].axisValue}</div>`;
+        const dataIndex = params[0].dataIndex;
+        const pointData = data[dataIndex];
+        html += `季节推演: <b>${pointData.season}</b><br/>`;
+
+        if (pointData.isHuinan) {
+          html += `<span style="color:#0284c7;font-weight:bold">💧 回南天高发期 (极易返潮)</span><br/>`;
+        } else if (pointData.isHumidSpell) {
+          html += `<span style="color:#16a34a;font-weight:bold">💦 连续潮湿期 (可能闷热或湿冷)</span><br/>`;
+        } else if (pointData.isDrySpell) {
+          html += `<span style="color:#ca8a04;font-weight:bold">🏜️ 连续干燥期 (注意保湿补水)</span><br/>`;
+        }
+
+        if (pointData.isRainySeason) {
+          html += `<span style="color:#0284c7;font-weight:bold">🌧️ 处于集中降雨季 (汛期/梅雨期)</span><br/>`;
+        }
+
+        const disasters = [];
+        if (pointData.windAvg >= 62) disasters.push('🌪️ 大风预警');
+        if (pointData.precipAvg >= 50) disasters.push('🌧️ 暴雨预警');
+        if (pointData.tMax >= 38 || pointData.twMax >= 28) disasters.push('🌡️ 高温预警');
+        if ((pointData.tAvg <= 5 && pointData.rhAvg >= 80) || pointData.tMin <= -5) disasters.push('❄️ 寒冷预警');
+
+        if (disasters.length > 0) {
+          html += `<div style="margin-top:4px;padding-top:4px;border-top:1px dashed #cbd5e1;color:#ef4444;font-weight:bold">
+            🚨 灾害触发: ${disasters.join(' | ')}
+          </div>`;
+        }
+
+        if (pointData.livability) {
+          html += `宜居评价: <span style="color:${pointData.livability.color};font-weight:bold">${pointData.livability.label}</span><br/>`;
+        }
+
+        if (pointData.tMax !== undefined && pointData.tMin !== undefined) {
+          html += `干球温度: <b>${pointData.tMin}</b>°C ~ <b style="color:#ef4444">${pointData.tMax}</b>°C<br/>`;
+        }
+        if (pointData.twMax !== undefined && pointData.twMin !== undefined) {
+          html += `湿球体感: <b>${pointData.twMin}</b>°C ~ <b style="color:#ef4444">${pointData.twMax}</b>°C<br/>`;
+        }
+        if (pointData.rhMax !== undefined && pointData.rhMin !== undefined) {
+          html += `相对湿度: <b>${pointData.rhMin}</b>% ~ <b style="color:#0ea5e9">${pointData.rhMax}</b>%<br/>`;
+        }
+
+        let precipLevel = '无雨/微雨';
+        if (pointData.precipAvg >= 50) precipLevel = '暴雨';
+        else if (pointData.precipAvg >= 20) precipLevel = '大雨';
+        else if (pointData.precipAvg >= 10) precipLevel = '中雨';
+        else if (pointData.precipAvg >= 1) precipLevel = '小雨';
+        html += `降雨情况: <b>${precipLevel}</b> (${pointData.precipAvg} mm)<br/>`;
+
+        if (pointData.pm25Avg !== undefined) {
+          let pmColor = '#10b981';
+          if (pointData.pm25Avg > 150) pmColor = '#8b5cf6';
+          else if (pointData.pm25Avg > 115) pmColor = '#ef4444';
+          else if (pointData.pm25Avg > 75) pmColor = '#f97316';
+          else if (pointData.pm25Avg > 35) pmColor = '#f59e0b';
+          html += `空气质量 (PM2.5): <b style="color:${pmColor}">${pointData.pm25Avg}</b> (峰值: ${pointData.pm25Max})<br/>`;
+        }
+
+        return html;
+      }
+    };
+
+    const monthAxisLabel = {
+      color: '#64748b',
+      fontSize: 10,
+      formatter: (value: string) => value.endsWith('-01') ? `${Number(value.slice(0, 2))}月` : ''
+    };
+
+    const mobileXAxis = (gridIndex: number, showLabel = false) => ({
+      type: 'category',
+      data: dates,
+      gridIndex,
+      axisLine: { lineStyle: { color: '#cbd5e1' } },
+      axisTick: { show: false },
+      axisLabel: showLabel ? monthAxisLabel : { show: false }
+    });
+
+    const mobileYAxis = (gridIndex: number, extra: Record<string, any> = {}) => ({
+      type: 'value',
+      gridIndex,
+      axisLine: { lineStyle: { color: '#cbd5e1' } },
+      splitLine: { lineStyle: { color: '#f1f5f9' } },
+      axisLabel: { color: '#64748b', fontSize: 10, margin: 3 },
+      ...extra
+    });
+
+    const livabilityRibbon = (xAxisIndex: number, yAxisIndex: number) => ({
+      name: '宜居度',
+      type: 'bar',
+      xAxisIndex,
+      yAxisIndex,
+      data: data.map(d => ({
+        value: 1,
+        itemStyle: { color: d.livability ? d.livability.color : '#e2e8f0' }
+      })),
+      barWidth: '100%',
+      barCategoryGap: '0%'
+    });
+
+    const mobileTemperatureBand = (xAxisIndex: number, yAxisIndex: number) => [
+      {
+        name: '温差底带',
+        type: 'line',
+        xAxisIndex,
+        yAxisIndex,
+        data: tMin,
+        lineStyle: { opacity: 0 },
+        stack: `temp-band-${xAxisIndex}`,
+        symbol: 'none'
+      },
+      {
+        name: '日温差带',
+        type: 'line',
+        xAxisIndex,
+        yAxisIndex,
+        data: tDiff,
+        lineStyle: { opacity: 0 },
+        areaStyle: { color: 'rgba(148, 163, 184, 0.16)' },
+        stack: `temp-band-${xAxisIndex}`,
+        symbol: 'none'
+      }
+    ];
+
+    const mobileWetBulbBand = (xAxisIndex: number, yAxisIndex: number) => [
+      {
+        name: '体感底带',
+        type: 'line',
+        xAxisIndex,
+        yAxisIndex,
+        data: twMin,
+        lineStyle: { opacity: 0 },
+        stack: `wet-band-${xAxisIndex}`,
+        symbol: 'none'
+      },
+      {
+        name: '体感温差带',
+        type: 'line',
+        xAxisIndex,
+        yAxisIndex,
+        data: twDiff,
+        lineStyle: { opacity: 0 },
+        areaStyle: { color: 'rgba(16, 185, 129, 0.12)' },
+        stack: `wet-band-${xAxisIndex}`,
+        symbol: 'none'
+      }
+    ];
+
+    const mobileHumidityBand = (xAxisIndex: number, yAxisIndex: number) => [
+      {
+        name: '湿度底带',
+        type: 'line',
+        xAxisIndex,
+        yAxisIndex,
+        data: rhMin,
+        lineStyle: { opacity: 0 },
+        stack: `humidity-band-${xAxisIndex}`,
+        symbol: 'none'
+      },
+      {
+        name: '湿度波动带',
+        type: 'line',
+        xAxisIndex,
+        yAxisIndex,
+        data: rhDiff,
+        lineStyle: { opacity: 0 },
+        areaStyle: { color: 'rgba(14, 165, 233, 0.12)' },
+        stack: `humidity-band-${xAxisIndex}`,
+        symbol: 'none'
+      }
+    ];
+
+    const mobileTitle = (title: string, subtitle: string, secondTitle?: string, thirdTitle?: string) => [
+      { text: title, left: 'center', top: 0, textStyle: { color: '#0f172a', fontSize: 14, fontWeight: 700 } },
+      { text: subtitle, left: '12%', top: '8%', textStyle: { fontSize: 11, color: '#64748b', fontWeight: 'normal' } },
+      ...(secondTitle ? [{ text: secondTitle, left: '12%', top: '49%', textStyle: { fontSize: 11, color: '#64748b', fontWeight: 'normal' } }] : []),
+      ...(thirdTitle ? [{ text: thirdTitle, left: '12%', top: '86%', textStyle: { fontSize: 11, color: '#64748b', fontWeight: 'normal' } }] : [])
+    ];
+
+    if (isMobile) {
+      const baseMobile = {
+        tooltip,
+        legend: { show: false },
+        axisPointer: { link: [{ xAxisIndex: 'all' }] }
+      };
+
+      if (mobileMode === 'overview') {
+        return {
+          ...baseMobile,
+          title: mobileTitle('年度气候概览', '气温 / 湿球体感', '降水 / PM2.5', '宜居条带'),
+          grid: [
+            { left: '12%', right: '5%', top: '15%', height: '26%' },
+            { left: '12%', right: '12%', top: '56%', height: '22%' },
+            { left: '12%', right: '5%', top: '91%', height: '5%' }
+          ],
+          xAxis: [mobileXAxis(0), mobileXAxis(1), mobileXAxis(2, true)],
+          yAxis: [
+            mobileYAxis(0),
+            mobileYAxis(1),
+            mobileYAxis(1, { position: 'right', axisLabel: { color: '#a21caf', fontSize: 10, margin: 3 }, splitLine: { show: false } }),
+            { type: 'value', gridIndex: 2, show: false, max: 1 }
+          ],
+          series: [
+            ...mobileTemperatureBand(0, 0),
+            {
+              name: '干球气温',
+              type: 'line',
+              xAxisIndex: 0,
+              yAxisIndex: 0,
+              data: tAvg,
+              smooth: true,
+              symbol: 'none',
+              lineStyle: { color: '#64748b', width: 2 },
+              markArea: { data: temperatureMarkAreas, label: { show: false } }
+            },
+            {
+              name: '湿球体感',
+              type: 'line',
+              xAxisIndex: 0,
+              yAxisIndex: 0,
+              data: twAvg,
+              smooth: true,
+              symbol: 'none',
+              lineStyle: { color: '#f59e0b', width: 2 }
+            },
+            {
+              name: '降水',
+              type: 'bar',
+              xAxisIndex: 1,
+              yAxisIndex: 1,
+              data: precipAvg,
+              barWidth: '80%',
+              itemStyle: { color: '#38bdf8' },
+              markArea: { data: rainySeasonAreas }
+            },
+            {
+              name: 'PM2.5',
+              type: 'line',
+              xAxisIndex: 1,
+              yAxisIndex: 2,
+              data: pm25Avg,
+              smooth: true,
+              symbol: 'none',
+              lineStyle: { color: '#a21caf', width: 2 }
+            },
+            livabilityRibbon(2, 3)
+          ]
+        };
+      }
+
+      if (mobileMode === 'thermal') {
+        return {
+          ...baseMobile,
+          title: mobileTitle('体感热舒适', '干球气温', '湿球体感'),
+          grid: [
+            { left: '12%', right: '5%', top: '15%', height: '31%' },
+            { left: '12%', right: '5%', top: '57%', height: '31%' }
+          ],
+          xAxis: [mobileXAxis(0), mobileXAxis(1, true)],
+          yAxis: [mobileYAxis(0), mobileYAxis(1)],
+          series: [
+            ...mobileTemperatureBand(0, 0),
+            {
+              name: '平均气温',
+              type: 'line',
+              xAxisIndex: 0,
+              yAxisIndex: 0,
+              data: tAvg,
+              smooth: true,
+              symbol: 'none',
+              lineStyle: { color: '#64748b', width: 2 },
+              markArea: { data: temperatureMarkAreas, label: { show: false } }
+            },
+            {
+              name: '最高温',
+              type: 'line',
+              xAxisIndex: 0,
+              yAxisIndex: 0,
+              data: tMax,
+              symbol: 'none',
+              lineStyle: { color: '#ef4444', width: 1, type: 'dashed' }
+            },
+            ...mobileWetBulbBand(1, 1),
+            {
+              name: '湿球体感',
+              type: 'line',
+              xAxisIndex: 1,
+              yAxisIndex: 1,
+              data: twAvg,
+              smooth: true,
+              symbol: 'none',
+              lineStyle: { color: '#f59e0b', width: 2 }
+            },
+            {
+              name: '湿球最高',
+              type: 'line',
+              xAxisIndex: 1,
+              yAxisIndex: 1,
+              data: twMax,
+              symbol: 'none',
+              lineStyle: { color: '#ef4444', width: 1, type: 'dashed' }
+            }
+          ]
+        };
+      }
+
+      if (mobileMode === 'water') {
+        return {
+          ...baseMobile,
+          title: mobileTitle('水汽与降雨', '相对湿度', '降水与汛期'),
+          grid: [
+            { left: '12%', right: '5%', top: '15%', height: '31%' },
+            { left: '12%', right: '5%', top: '57%', height: '31%' }
+          ],
+          xAxis: [mobileXAxis(0), mobileXAxis(1, true)],
+          yAxis: [mobileYAxis(0, { max: 100, min: 0 }), mobileYAxis(1)],
+          series: [
+            ...mobileHumidityBand(0, 0),
+            {
+              name: '相对湿度',
+              type: 'line',
+              xAxisIndex: 0,
+              yAxisIndex: 0,
+              data: rhAvg,
+              smooth: true,
+              symbol: 'none',
+              lineStyle: { color: '#0ea5e9', width: 2 },
+              markArea: { data: humidityMarkAreas }
+            },
+            {
+              name: '降水',
+              type: 'bar',
+              xAxisIndex: 1,
+              yAxisIndex: 1,
+              data: precipAvg,
+              barWidth: '80%',
+              itemStyle: {
+                color: (params: any) => {
+                  const val = params.value;
+                  if (val < 1) return 'rgba(226, 232, 240, 0.35)';
+                  if (val < 5) return '#bae6fd';
+                  if (val < 15) return '#38bdf8';
+                  return '#0284c7';
+                }
+              },
+              markArea: { data: rainySeasonAreas }
+            }
+          ]
+        };
+      }
+
+      if (mobileMode === 'air') {
+        return {
+          ...baseMobile,
+          title: mobileTitle('空气与宜居', 'PM2.5 空气质量', '宜居条带'),
+          grid: [
+            { left: '12%', right: '5%', top: '15%', height: '45%' },
+            { left: '12%', right: '5%', top: '80%', height: '8%' }
+          ],
+          xAxis: [mobileXAxis(0), mobileXAxis(1, true)],
+          yAxis: [mobileYAxis(0), { type: 'value', gridIndex: 1, show: false, max: 1 }],
+          series: [
+            {
+              name: 'PM2.5',
+              type: 'bar',
+              xAxisIndex: 0,
+              yAxisIndex: 0,
+              data: pm25Avg,
+              barWidth: '80%',
+              itemStyle: {
+                color: (params: any) => {
+                  const val = params.value;
+                  if (val <= 35) return '#10b981';
+                  if (val <= 75) return '#f59e0b';
+                  if (val <= 115) return '#f97316';
+                  if (val <= 150) return '#ef4444';
+                  return '#8b5cf6';
+                }
+              }
+            },
+            {
+              name: 'PM2.5峰值',
+              type: 'line',
+              xAxisIndex: 0,
+              yAxisIndex: 0,
+              data: pm25Max,
+              smooth: true,
+              symbol: 'none',
+              lineStyle: { color: '#86198f', width: 1, type: 'dashed' }
+            },
+            livabilityRibbon(1, 1)
+          ]
+        };
+      }
+
+      return {
+        ...baseMobile,
+        title: mobileTitle('极端灾害追踪', '灾害触发日', '宜居条带'),
+        grid: [
+          { left: '16%', right: '5%', top: '16%', height: '42%' },
+          { left: '12%', right: '5%', top: '82%', height: '8%' }
+        ],
+        xAxis: [mobileXAxis(0), mobileXAxis(1, true)],
+        yAxis: [
+          {
+            type: 'value',
+            gridIndex: 0,
+            min: -0.5,
+            max: 3.5,
+            splitLine: { show: true, lineStyle: { type: 'dashed', color: '#f1f5f9' } },
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: {
+              formatter: (val: number) => {
+                if (val === 0) return '寒冷';
+                if (val === 1) return '高温';
+                if (val === 2) return '暴雨';
+                if (val === 3) return '大风';
+                return '';
+              },
+              color: '#64748b',
+              fontSize: 10,
+              margin: 2
+            }
+          },
+          { type: 'value', gridIndex: 1, show: false, max: 1 }
+        ],
+        series: [
+          { name: '寒冷', type: 'scatter', xAxisIndex: 0, yAxisIndex: 0, data: scatterSevereCold, symbolSize: 6, itemStyle: { color: '#0ea5e9' } },
+          { name: '高温', type: 'scatter', xAxisIndex: 0, yAxisIndex: 0, data: scatterSevereHeat, symbolSize: 6, itemStyle: { color: '#ef4444' } },
+          { name: '暴雨', type: 'scatter', xAxisIndex: 0, yAxisIndex: 0, data: scatterRainstorm, symbolSize: 6, itemStyle: { color: '#1d4ed8' } },
+          { name: '大风', type: 'scatter', xAxisIndex: 0, yAxisIndex: 0, data: scatterTyphoon, symbolSize: 6, itemStyle: { color: '#8b5cf6' } },
+          livabilityRibbon(1, 1)
+        ]
+      };
+    }
 
     return {
       title: [
         {
           text: '年度真实气候与极值推演',
-          left: 'center',
-          top: 0,
-          textStyle: { color: '#0f172a', fontSize: 16 }
+          left: isMobile ? '12%' : 'center',
+          top: isMobile ? '0.8%' : 0,
+          textStyle: { color: '#0f172a', fontSize: chartTitleSize }
         },
         {
-          text: '🌡️ 干球气温带 (极值阴影与分段均值)',
-          left: '4%',
-          top: '1%',
-          textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
+          text: isMobile ? '🌡️ 干球气温带' : '🌡️ 干球气温带 (极值阴影与分段均值)',
+          left: isMobile ? '12%' : '4%',
+          top: isMobile ? '4.2%' : '1%',
+          textStyle: { fontSize: sectionTitleSize, color: '#64748b', fontWeight: 'normal' }
         },
         {
-          text: '💦 湿球体感带 (人体真实感知)',
-          left: '4%',
-          top: '26%',
-          textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
+          text: isMobile ? '💦 湿球体感带' : '💦 湿球体感带 (人体真实感知)',
+          left: isMobile ? '12%' : '4%',
+          top: isMobile ? '27.2%' : '26%',
+          textStyle: { fontSize: sectionTitleSize, color: '#64748b', fontWeight: 'normal' }
         },
         {
-          text: '💧 相对湿度 (干湿波动极限与连续气象期)',
-          left: '4%',
-          top: '47%',
-          textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
+          text: isMobile ? '💧 相对湿度与干湿期' : '💧 相对湿度 (干湿波动极限与连续气象期)',
+          left: isMobile ? '12%' : '4%',
+          top: isMobile ? '47.2%' : '47%',
+          textStyle: { fontSize: sectionTitleSize, color: '#64748b', fontWeight: 'normal' }
         },
         {
-          text: '🌧️ 降水量 (自动识别梅雨/汛期)',
-          left: '4%',
-          top: '60%',
-          textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
+          text: isMobile ? '🌧️ 降水与汛期' : '🌧️ 降水量 (自动识别梅雨/汛期)',
+          left: isMobile ? '12%' : '4%',
+          top: isMobile ? '60.5%' : '60%',
+          textStyle: { fontSize: sectionTitleSize, color: '#64748b', fontWeight: 'normal' }
         },
         {
-          text: '😷 空气质量 (PM2.5 历史真实浓度)',
-          left: '4%',
-          top: '71%',
-          textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
+          text: isMobile ? '😷 PM2.5 空气质量' : '😷 空气质量 (PM2.5 历史真实浓度)',
+          left: isMobile ? '12%' : '4%',
+          top: isMobile ? '71.5%' : '71%',
+          textStyle: { fontSize: sectionTitleSize, color: '#64748b', fontWeight: 'normal' }
         },
         {
-          text: '🚨 极端组合灾害追踪 (横向: 天数 / 纵向: 灾害种类重叠)',
-          left: '4%',
-          top: '84%',
-          textStyle: { fontSize: 13, color: '#ef4444', fontWeight: 'bold' }
+          text: isMobile ? '🚨 极端组合灾害追踪' : '🚨 极端组合灾害追踪 (横向: 天数 / 纵向: 灾害种类重叠)',
+          left: isMobile ? '12%' : '4%',
+          top: isMobile ? '83.2%' : '84%',
+          textStyle: { fontSize: sectionTitleSize, color: '#ef4444', fontWeight: 'bold' }
         },
         {
           text: '🏡 宜居综合评估条带',
-          left: '4%',
-          top: '94%',
-          textStyle: { fontSize: 13, color: '#64748b', fontWeight: 'normal' }
+          left: isMobile ? '12%' : '4%',
+          top: isMobile ? '93.5%' : '94%',
+          textStyle: { fontSize: sectionTitleSize, color: '#64748b', fontWeight: 'normal' }
         }
       ],
       tooltip: {
         trigger: 'axis',
+        confine: true,
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderColor: '#e2e8f0',
         textStyle: { color: '#0f172a' },
@@ -308,30 +793,25 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
       axisPointer: {
         link: [{ xAxisIndex: 'all' }]
       },
-      grid: [
-        { left: '4%', right: '4%', top: '4%', height: '22%' },
-        { left: '4%', right: '4%', top: '29%', height: '18%' },
-        { left: '4%', right: '4%', top: '50%', height: '10%' },
-        { left: '4%', right: '4%', top: '63%', height: '8%' },
-        { left: '4%', right: '4%', top: '74%', height: '7%' },
-        { left: '4%', right: '4%', top: '96%', height: '3%' },     // Grid 5: Livability
-        { left: '4%', right: '4%', top: '88%', height: '5%' }      // Grid 6: Disaster
-      ],
+      dataZoom: isMobile ? [
+        { type: 'inside', xAxisIndex: [0, 1, 2, 3, 4, 5, 6], filterMode: 'none' }
+      ] : [],
+      grid,
       xAxis: [
         { type: 'category', data: dates, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 2, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 3, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
         { type: 'category', data: dates, gridIndex: 4, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { show: false }, axisTick: { show: false } },
-        { type: 'category', data: dates, gridIndex: 5, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { color: '#64748b' } },
+        { type: 'category', data: dates, gridIndex: 5, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: dateAxisLabel },
         { type: 'category', data: dates, gridIndex: 6, show: false }
       ],
       yAxis: [
-        { type: 'value', gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
-        { type: 'value', gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
-        { type: 'value', gridIndex: 2, max: 100, min: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
-        { type: 'value', gridIndex: 3, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
-        { type: 'value', gridIndex: 4, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b' } },
+        { type: 'value', gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: axisLabelStyle },
+        { type: 'value', gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: axisLabelStyle },
+        { type: 'value', gridIndex: 2, max: 100, min: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: axisLabelStyle },
+        { type: 'value', gridIndex: 3, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: axisLabelStyle },
+        { type: 'value', gridIndex: 4, axisLine: { lineStyle: { color: '#cbd5e1' } }, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: axisLabelStyle },
         { type: 'value', gridIndex: 5, show: false, max: 1 },
         { 
           type: 'value', 
@@ -343,14 +823,14 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
           axisTick: { show: false },
           axisLabel: {
             formatter: (val: number) => {
-              if (val === 0) return '❄️ 寒冷预警';
-              if (val === 1) return '🌡️ 高温预警';
-              if (val === 2) return '🌧️ 暴雨预警';
-              if (val === 3) return '🌪️ 大风预警';
+              if (val === 0) return isMobile ? '寒冷' : '❄️ 寒冷预警';
+              if (val === 1) return isMobile ? '高温' : '🌡️ 高温预警';
+              if (val === 2) return isMobile ? '暴雨' : '🌧️ 暴雨预警';
+              if (val === 3) return isMobile ? '大风' : '🌪️ 大风预警';
               return '';
             },
             color: '#64748b',
-            fontSize: 10,
+            fontSize: isMobile ? 9 : 10,
             margin: 2
           }
         }
@@ -368,7 +848,12 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
         { // 2: mapped visualMap
           name: '气温 (干球)', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
           data: tAvg, smooth: true, lineStyle: { width: 2, type: 'solid' }, symbol: 'none',
-          markArea: { data: temperatureMarkAreas, label: { color: '#64748b', fontWeight: 'bold', position: 'insideTop', padding: [10, 0, 0, 0] } }
+          markArea: {
+            data: temperatureMarkAreas,
+            label: isMobile
+              ? { show: false }
+              : { color: '#64748b', fontWeight: 'bold', position: 'insideTop', padding: [10, 0, 0, 0] }
+          }
         },
         { // 3: mapped visualMap
           name: '干球最高温', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
@@ -478,16 +963,34 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
         }
       ]
     };
-  }, [data]);
+  }, [data, isMobile, mobileMode]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <ReactECharts
-        option={option}
-        style={{ height: '100%', width: '100%' }}
-        theme="light"
-        opts={{ renderer: 'canvas' }}
-      />
+    <div className="climate-chart-shell">
+      {isMobile && (
+        <div className="mobile-chart-modes" role="tablist" aria-label="气候图表视图">
+          {mobileClimateModes.map(mode => (
+            <button
+              key={mode.key}
+              type="button"
+              className={`mobile-chart-mode ${mobileMode === mode.key ? 'active' : ''}`}
+              onClick={() => setMobileMode(mode.key)}
+              role="tab"
+              aria-selected={mobileMode === mode.key}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="climate-chart-canvas">
+        <ReactECharts
+          option={option}
+          style={{ height: '100%', width: '100%' }}
+          theme="light"
+          opts={{ renderer: 'canvas' }}
+        />
+      </div>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 export interface CityCompareData {
   name: string;
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export const CompareDashboard: React.FC<Props> = ({ cities }) => {
+  const isMobile = useMediaQuery('(max-width: 640px)');
+
   const option = useMemo(() => {
     if (!cities || cities.length === 0) return {};
 
@@ -76,17 +79,19 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
     const maxHumid = Math.max(90, ...stats.map(s => s.humid));
     const maxDry = Math.max(90, ...stats.map(s => s.dry));
     const maxSmog = Math.max(30, ...stats.map(s => s.smog));
+    const axisLabel = { color: '#64748b', fontSize: isMobile ? 10 : 12, interval: 0, rotate: isMobile ? 25 : 0 };
 
     return {
       title: [
-        { text: '综合宜居天数对比 (十年均值)', left: '25%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
-        { text: '四季时长占比分布', left: '75%', top: '5%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
-        { text: '极端气温天数压测 (高温预警 vs 寒冷预警)', left: '25%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } },
-        { text: '高敏异常气象对比 (雾霾/回南/汛期/极值干湿)', left: '75%', top: '55%', textAlign: 'center', textStyle: { fontSize: 14, color: '#475569' } }
+        { text: '综合宜居天数对比 (十年均值)', left: isMobile ? '50%' : '25%', top: isMobile ? '2%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
+        { text: '四季时长占比分布', left: isMobile ? '50%' : '75%', top: isMobile ? '27%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
+        { text: isMobile ? '极端气温天数压测' : '极端气温天数压测 (高温预警 vs 寒冷预警)', left: isMobile ? '50%' : '25%', top: isMobile ? '52%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
+        { text: isMobile ? '高敏异常气象对比' : '高敏异常气象对比 (雾霾/回南/汛期/极值干湿)', left: isMobile ? '50%' : '75%', top: isMobile ? '76%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } }
       ],
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
+        confine: true,
         formatter: (params: any) => {
           if (params.componentSubType === 'radar') return params.name; // Radar tooltip is handled differently
           let html = `<div style="font-weight:bold;margin-bottom:4px;">${params[0].axisValue}</div>`;
@@ -99,18 +104,18 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         }
       },
       legend: [
-        { data: ['极度舒适', '尚可接受', '较不宜居', '极端恶劣'], top: '10%', left: '5%', width: '40%' },
-        { data: ['春季', '夏季', '秋季', '冬季'], top: '10%', left: '55%', width: '40%' },
-        { data: ['高温预警', '寒冷预警'], top: '60%', left: '5%', width: '40%' }
+        { data: ['极度舒适', '尚可接受', '较不宜居', '极端恶劣'], top: isMobile ? '5%' : '10%', left: isMobile ? '4%' : '5%', width: isMobile ? '92%' : '40%', type: isMobile ? 'scroll' : undefined },
+        { data: ['春季', '夏季', '秋季', '冬季'], top: isMobile ? '30%' : '10%', left: isMobile ? '4%' : '55%', width: isMobile ? '92%' : '40%', type: isMobile ? 'scroll' : undefined },
+        { data: ['高温预警', '寒冷预警'], top: isMobile ? '55%' : '60%', left: isMobile ? '4%' : '5%', width: isMobile ? '92%' : '40%' }
       ],
       grid: [
-        { left: '5%', right: '55%', top: '20%', height: '25%' }, // Grid 0: Livability
-        { left: '55%', right: '5%', top: '20%', height: '25%' }, // Grid 1: Seasons
-        { left: '5%', right: '55%', top: '70%', height: '25%' }  // Grid 2: Extreme Weather
+        isMobile ? { left: '12%', right: '5%', top: '9%', height: '15%' } : { left: '5%', right: '55%', top: '20%', height: '25%' },
+        isMobile ? { left: '12%', right: '5%', top: '34%', height: '15%' } : { left: '55%', right: '5%', top: '20%', height: '25%' },
+        isMobile ? { left: '12%', right: '5%', top: '59%', height: '14%' } : { left: '5%', right: '55%', top: '70%', height: '25%' }
       ],
       radar: {
-        center: ['75%', '80%'],
-        radius: '30%',
+        center: isMobile ? ['50%', '90%'] : ['75%', '80%'],
+        radius: isMobile ? '14%' : '30%',
         indicator: [
           { name: '回南天', max: maxHuinan },
           { name: '集中降雨/汛期', max: maxRainy },
@@ -121,14 +126,14 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         splitArea: { areaStyle: { color: ['#f8fafc', '#f1f5f9'] } }
       },
       xAxis: [
-        { type: 'category', data: cityNames, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } } },
-        { type: 'category', data: cityNames, gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } } },
-        { type: 'category', data: cityNames, gridIndex: 2, axisLine: { lineStyle: { color: '#cbd5e1' } } }
+        { type: 'category', data: cityNames, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel },
+        { type: 'category', data: cityNames, gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel },
+        { type: 'category', data: cityNames, gridIndex: 2, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel }
       ],
       yAxis: [
-        { type: 'value', gridIndex: 0, splitLine: { lineStyle: { color: '#f1f5f9' } } },
-        { type: 'value', gridIndex: 1, splitLine: { lineStyle: { color: '#f1f5f9' } } },
-        { type: 'value', gridIndex: 2, splitLine: { lineStyle: { color: '#f1f5f9' } } }
+        { type: 'value', gridIndex: 0, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: isMobile ? 10 : 12 } },
+        { type: 'value', gridIndex: 1, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: isMobile ? 10 : 12 } },
+        { type: 'value', gridIndex: 2, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: isMobile ? 10 : 12 } }
       ],
       series: [
         // Livability
@@ -165,10 +170,10 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         }
       ]
     };
-  }, [cities]);
+  }, [cities, isMobile]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '800px', background: '#ffffff', borderRadius: '12px', padding: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+    <div className="compare-dashboard">
       <ReactECharts
         option={option}
         style={{ height: '100%', width: '100%' }}
