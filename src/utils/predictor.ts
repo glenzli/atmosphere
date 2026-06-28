@@ -112,10 +112,10 @@ export function generatePrediction(
   }
 
   const expectedDailyPrecip = totalPrecipVolume / totalWeight;
-  let precipScale = '晴天为主';
-  if (expectedDailyPrecip > 0.1 && expectedDailyPrecip <= 5) precipScale = '零星小雨';
-  else if (expectedDailyPrecip > 5 && expectedDailyPrecip <= 15) precipScale = '明显阵雨';
-  else if (expectedDailyPrecip > 15) precipScale = '大雨/暴雨';
+  let precipScale: 'clear' | 'light' | 'shower' | 'heavy' = 'clear';
+  if (expectedDailyPrecip > 0.1 && expectedDailyPrecip <= 5) precipScale = 'light';
+  else if (expectedDailyPrecip > 5 && expectedDailyPrecip <= 15) precipScale = 'shower';
+  else if (expectedDailyPrecip > 15) precipScale = 'heavy';
 
   return {
     tMaxRange: [Math.round(tMaxLow), Math.round(tMaxHigh)],

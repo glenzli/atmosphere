@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ClimateChart } from './components/ClimateChart';
 import { TrendChart } from './components/TrendChart';
 import { CompareDashboard, type CityCompareData } from './components/CompareDashboard';
 import { geocodeCity, fetchHistoricalData, clearCache } from './api';
 import { applyLivabilityPreference, type PreferenceConfig, defaultPreference } from './utils/analyzer';
 import { Predictor } from './components/Predictor';
+import { formatLivability, formatSeason, formatYearLabel } from './i18n/format';
 import './index.css';
 
 export default function App() {
+  const { t, i18n } = useTranslation();
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState('加载中...');
+  const [loadingMsg, setLoadingMsg] = useState(() => t('app.loadingDefault'));
   const [error, setError] = useState<string | null>(null);
   const [dataMap, setDataMap] = useState<Record<string, any[]> | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>('');
@@ -25,7 +28,7 @@ export default function App() {
   const [recentCities, setRecentCities] = useState<string[]>(() => {
     try { 
       const saved = localStorage.getItem('recent_cities');
-      return saved ? JSON.parse(saved) : ['深圳', '北京', '海口', '昆明']; 
+      return saved ? JSON.parse(saved) : (i18n.language.startsWith('zh') ? ['深圳', '北京', '海口', '昆明'] : ['Shenzhen', 'Beijing', 'Haikou', 'Kunming']);
     } catch { return []; }
   });
 
@@ -70,9 +73,9 @@ export default function App() {
       });
       
       if (cachedCities.includes(searchCity)) {
-        setLoadingMsg('⚡️ 极速加载本地缓存数据中...');
+        setLoadingMsg(t('app.loadingCached'));
       } else {
-        setLoadingMsg('☁️ 正在从 Open-Meteo 实时计算拉取十年气象切片，请稍候...');
+        setLoadingMsg(t('app.loadingRemote'));
       }
 
       const { data } = await fetchHistoricalData(geo.latitude, geo.longitude, 10);
@@ -90,7 +93,7 @@ export default function App() {
         setSelectedYear(sortedYears[0]);
       }
     } catch (err: any) {
-      setError(err.message || '获取数据失败，请检查网络或重试');
+      setError(err.message || t('app.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -122,10 +125,31 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <h1>Atmosphere</h1>
-        <p>输入全球任意城市，基于过去10年气象数据推演真实体感宜居度</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem' }}>
+          <h1>Atmosphere</h1>
+          <button
+            type="button"
+            onClick={() => i18n.changeLanguage(i18n.language.startsWith('zh') ? 'en-US' : 'zh-CN')}
+            aria-label={t('language.aria')}
+            title={t('language.aria')}
+            style={{
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#334155',
+              padding: '0.35rem 0.65rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              lineHeight: 1,
+            }}
+          >
+            {t('language.switchTo')}
+          </button>
+        </div>
+        <p>{t('app.tagline')}</p>
         <div className="preference-panel" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', background: '#f8fafc', padding: '0.6rem 1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: 'fit-content', margin: '1rem auto 0' }}>
-          <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 'bold' }}>体质偏好叠加:</span>
+          <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 'bold' }}>{t('app.preferenceLabel')}</span>
           
           <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
             <input 
@@ -134,7 +158,7 @@ export default function App() {
               onChange={e => setPreference({ ...preference, hate_heat: e.target.checked })}
               style={{ cursor: 'pointer' }}
             />
-            ❄️ 怕热 (避暑)
+            {t('app.prefHeat')}
           </label>
           
           <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
@@ -144,7 +168,7 @@ export default function App() {
               onChange={e => setPreference({ ...preference, hate_cold: e.target.checked })}
               style={{ cursor: 'pointer' }}
             />
-            🔥 怕冷 (避寒)
+            {t('app.prefCold')}
           </label>
           
           <label className="preference-option" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.9rem', color: '#0f172a' }}>
@@ -154,7 +178,7 @@ export default function App() {
               onChange={e => setPreference({ ...preference, sensitive: e.target.checked })}
               style={{ cursor: 'pointer' }}
             />
-            😷 高敏 (防霾/防干/防潮)
+            {t('app.prefSensitive')}
           </label>
         </div>
       </header>
@@ -163,18 +187,18 @@ export default function App() {
         <input
           type="text"
           className="input-field"
-          placeholder="例如：深圳、北京、Vancouver..."
+          placeholder={t('app.cityPlaceholder')}
           value={city}
           onChange={(e) => setCity(e.target.value)}
         />
         <button type="submit" className="btn" disabled={loading}>
-          {loading ? '分析中...' : '开始推演'}
+          {loading ? t('app.analyzing') : t('app.start')}
         </button>
         <button 
           type="button" 
           className="btn btn-secondary" 
           onClick={() => setShowConfig(true)}
-          title="配置 WAQI Token"
+          title={t('app.configTitle')}
         >
           ⚙️
         </button>
@@ -182,7 +206,7 @@ export default function App() {
 
       {recentCities.length > 0 && (
         <div className="recent-searches" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: '-1rem', marginBottom: '1rem' }}>
-          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>最近搜索：</span>
+          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{t('app.recentSearches')}</span>
           {recentCities.map(c => (
             <div key={c} className="recent-chip" style={{
               display: 'flex', alignItems: 'center', gap: '0.3rem', 
@@ -199,7 +223,7 @@ export default function App() {
                     return next;
                   });
                 }}
-                title="移除"
+                title={t('app.remove')}
               >
                 ×
               </span>
@@ -231,13 +255,13 @@ export default function App() {
                   <button 
                     onClick={() => {
                       if (compareCities.length >= 8) {
-                        alert('最多支持对比 8 个城市');
+                        alert(t('app.maxCompareAlert', { count: 8 }));
                         return;
                       }
                       setCompareCities([...compareCities, { name: cityInfo.name, dataMap: applyLivabilityPreference(dataMap, preference) }]);
                     }}
                     style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }}
-                  >+ 加入对比</button>
+                  >{t('app.addCompare')}</button>
                 )}
               </h2>
             </div>
@@ -253,7 +277,7 @@ export default function App() {
                   fontWeight: viewMode === 'daily' ? 600 : 400,
                   boxShadow: viewMode === 'daily' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                 }}
-              >👁 逐年气象细察</button>
+              >{t('app.views.daily')}</button>
               <button
                 className="view-tab"
                 onClick={() => setViewMode('trend')}
@@ -264,7 +288,7 @@ export default function App() {
                   fontWeight: viewMode === 'trend' ? 600 : 400,
                   boxShadow: viewMode === 'trend' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                 }}
-              >📈 宏观十年趋势</button>
+              >{t('app.views.trend')}</button>
               <button
                   className="view-tab"
                   onClick={() => setViewMode('compare')}
@@ -275,7 +299,7 @@ export default function App() {
                     fontWeight: viewMode === 'compare' ? 600 : 400,
                     boxShadow: viewMode === 'compare' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
-                >⚔️ 跨城对比 PK</button>
+                >{t('app.views.compare')}</button>
               <button
                 className="view-tab"
                 onClick={() => setViewMode('predict')}
@@ -286,7 +310,7 @@ export default function App() {
                   fontWeight: viewMode === 'predict' ? 600 : 400,
                   boxShadow: viewMode === 'predict' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                 }}
-              >🔮 旅行气候预测</button>
+              >{t('app.views.predict')}</button>
             </div>
           </div>
 
@@ -298,7 +322,7 @@ export default function App() {
             <>
               <div className="card year-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="year-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#334155' }}>年份详情</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#334155' }}>{t('app.yearDetails')}</div>
                   <div className="year-tabs" style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '8px' }}>
                     {Object.keys(dataMap).map(year => (
                       <button
@@ -313,7 +337,7 @@ export default function App() {
                           boxShadow: selectedYear === year ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
                           transition: 'all 0.2s'
                         }}
-                      >{year}</button>
+                      >{formatYearLabel(year, i18n.language)}</button>
                     ))}
                   </div>
                 </div>
@@ -321,19 +345,19 @@ export default function App() {
                 <div className="stats-layout" style={{ display: 'flex', gap: '1.5rem', alignItems: 'stretch' }}>
                   <div className="stat-group season-stat-group" style={{ flex: '0 0 auto', width: '380px', display: 'flex', flexDirection: 'column' }}>
                     <h3 style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span>📅 四季时长分布</span>
+                      <span>{t('app.seasonDuration')}</span>
                     </h3>
                     <div className="season-stat-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', flex: 1 }}>
                       {[
-                        { label: '春季', count: seasonStats['春季'], color: '#10b981', bg: '#ecfdf5', sub: '' },
-                        { label: '夏季', count: seasonStats['夏季'], color: '#ef4444', bg: '#fef2f2', sub: severeStats.summer > 0 ? `含高温预警: ${severeStats.summer}天` : '' },
-                        { label: '秋季', count: seasonStats['秋季'], color: '#f59e0b', bg: '#fffbeb', sub: '' },
-                        { label: '冬季', count: seasonStats['冬季'], color: '#3b82f6', bg: '#eff6ff', sub: severeStats.winter > 0 ? `含寒冷预警: ${severeStats.winter}天` : '' }
+                        { season: '春季', count: seasonStats['春季'], color: '#10b981', bg: '#ecfdf5', sub: '' },
+                        { season: '夏季', count: seasonStats['夏季'], color: '#ef4444', bg: '#fef2f2', sub: severeStats.summer > 0 ? t('app.seasonWarnHeat', { count: severeStats.summer }) : '' },
+                        { season: '秋季', count: seasonStats['秋季'], color: '#f59e0b', bg: '#fffbeb', sub: '' },
+                        { season: '冬季', count: seasonStats['冬季'], color: '#3b82f6', bg: '#eff6ff', sub: severeStats.winter > 0 ? t('app.seasonWarnCold', { count: severeStats.winter }) : '' }
                       ].map(s => (
-                        <div key={s.label} style={{ background: s.bg, padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <div key={s.season} style={{ background: s.bg, padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                            <span style={{ color: s.color, fontWeight: 600, fontSize: '0.85rem' }}>{s.label}</span>
-                            <span style={{ fontWeight: 'bold', color: s.color, fontSize: '1rem' }}>{s.count}天</span>
+                            <span style={{ color: s.color, fontWeight: 600, fontSize: '0.85rem' }}>{formatSeason(t, s.season)}</span>
+                            <span style={{ fontWeight: 'bold', color: s.color, fontSize: '1rem' }}>{s.count}{t('common.dayUnit')}</span>
                           </div>
                           {s.sub && <div style={{ fontSize: '0.7rem', color: s.color, opacity: 0.8, marginTop: '2px' }}>{s.sub}</div>}
                         </div>
@@ -343,21 +367,21 @@ export default function App() {
 
                   <div className="stat-group livability-stat-group" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <h3 style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span>🏡 极值宜居模型评估</span>
+                      <span>{t('app.livabilityTitle')}</span>
                     </h3>
                     <div className="livability-layout" style={{ display: 'flex', gap: '1rem', flex: 1 }}>
                       <div className="livability-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ flex: 1, background: '#ecfdf5', padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: '#059669', fontWeight: 'bold', fontSize: '0.85rem' }}>全年宜居期</span>
-                          <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#047857' }}>{livableStats.level1 + livableStats.level2} <span style={{fontSize: '0.7rem', fontWeight: 'normal'}}>天</span></span>
+                          <span style={{ color: '#059669', fontWeight: 'bold', fontSize: '0.85rem' }}>{t('app.livablePeriod')}</span>
+                          <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#047857' }}>{livableStats.level1 + livableStats.level2} <span style={{fontSize: '0.7rem', fontWeight: 'normal'}}>{t('common.dayUnit')}</span></span>
                         </div>
                         <div style={{ flex: 1, display: 'flex', gap: '0.5rem' }}>
                           <div style={{ flex: 1, background: '#d1fae5', padding: '0.3rem 0.5rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#059669', fontSize: '0.8rem' }}>极度舒适</span>
+                            <span style={{ color: '#059669', fontSize: '0.8rem' }}>{formatLivability(t, 1)}</span>
                             <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#047857' }}>{livableStats.level1}</span>
                           </div>
                           <div style={{ flex: 1, background: '#dbeafe', padding: '0.3rem 0.5rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#2563eb', fontSize: '0.8rem' }}>尚可接受</span>
+                            <span style={{ color: '#2563eb', fontSize: '0.8rem' }}>{formatLivability(t, 2)}</span>
                             <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#1d4ed8' }}>{livableStats.level2}</span>
                           </div>
                         </div>
@@ -365,16 +389,16 @@ export default function App() {
 
                       <div className="livability-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ flex: 1, background: '#fef2f2', padding: '0.4rem 0.75rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: '#dc2626', fontWeight: 'bold', fontSize: '0.85rem' }}>全年恶劣期</span>
-                          <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#b91c1c' }}>{livableStats.level3 + livableStats.level4} <span style={{fontSize: '0.7rem', fontWeight: 'normal'}}>天</span></span>
+                          <span style={{ color: '#dc2626', fontWeight: 'bold', fontSize: '0.85rem' }}>{t('app.unlivablePeriod')}</span>
+                          <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#b91c1c' }}>{livableStats.level3 + livableStats.level4} <span style={{fontSize: '0.7rem', fontWeight: 'normal'}}>{t('common.dayUnit')}</span></span>
                         </div>
                         <div style={{ flex: 1, display: 'flex', gap: '0.5rem' }}>
                           <div style={{ flex: 1, background: '#fffbeb', padding: '0.3rem 0.5rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#d97706', fontSize: '0.8rem' }}>较不宜居</span>
+                            <span style={{ color: '#d97706', fontSize: '0.8rem' }}>{formatLivability(t, 3)}</span>
                             <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#b45309' }}>{livableStats.level3}</span>
                           </div>
                           <div style={{ flex: 1, background: '#fee2e2', padding: '0.3rem 0.5rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>极端恶劣</span>
+                            <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{formatLivability(t, 4)}</span>
                             <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#b91c1c' }}>{livableStats.level4}</span>
                           </div>
                         </div>
@@ -409,7 +433,7 @@ export default function App() {
       {compareCities.length > 0 && (
         <div className="compare-tray" style={{ position: 'fixed', bottom: '2rem', right: '2rem', background: 'white', padding: '1rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', zIndex: 50, border: '1px solid #e2e8f0', minWidth: '250px' }}>
           <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-            <span>⚔️ 跨城对比托盘</span>
+            <span>{t('app.compareTray')}</span>
             <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{compareCities.length}/8</span>
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -429,28 +453,28 @@ export default function App() {
           <button 
             onClick={() => {
               if (compareCities.length < 2) {
-                alert('至少需要 2 个城市进行对比');
+                alert(t('app.minCompareAlert', { count: 2 }));
                 return;
               }
               setViewMode('compare');
             }}
             style={{ width: '100%', background: '#0f172a', color: 'white', border: 'none', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
-          >开始全维度 PK</button>
+          >{t('app.startCompare')}</button>
         </div>
       )}
 
       {showConfig && (
         <div className="modal-overlay" onClick={() => setShowConfig(false)}>
           <div className="modal card" onClick={e => e.stopPropagation()}>
-            <h2>⚙️ 系统配置与缓存管理</h2>
+            <h2>{t('app.settingsTitle')}</h2>
             
             <div className="form-group" style={{ paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0' }}>
               <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>本地已缓存城市列表 ({cachedCities.length})</span>
+                <span>{t('app.cachedCities', { count: cachedCities.length })}</span>
               </label>
               <div style={{ background: '#f8fafc', padding: '0.5rem', borderRadius: '8px', maxHeight: '150px', overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
                 {cachedCities.length === 0 ? (
-                  <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>暂无缓存数据</span>
+                  <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{t('common.noData')}</span>
                 ) : (
                   cachedCities.map(c => (
                     <span key={c} style={{ background: '#e2e8f0', color: '#334155', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem' }}>{c}</span>
@@ -465,15 +489,15 @@ export default function App() {
                   await clearCache();
                   setCachedCities([]);
                   localStorage.removeItem('cached_cities');
-                  alert('全部城市历史气象缓存已清理完毕！');
+                  alert(t('app.clearCacheDone'));
                 }}
               >
-                🗑️ 强制清空全部本地缓存
+                {t('app.clearCache')}
               </button>
             </div>
 
             <div className="form-actions" style={{ marginTop: '1rem' }}>
-              <button className="btn" onClick={() => setShowConfig(false)}>关闭</button>
+              <button className="btn" onClick={() => setShowConfig(false)}>{t('common.close')}</button>
             </div>
           </div>
         </div>

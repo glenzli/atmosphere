@@ -1,12 +1,15 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { formatYearLabel } from '../i18n/format';
 
 interface Props {
   dataMap: Record<string, any[]>;
 }
 
 export const TrendChart: React.FC<Props> = ({ dataMap }) => {
+  const { t, i18n } = useTranslation();
   const isMobile = useMediaQuery('(max-width: 640px)');
 
   const option = useMemo(() => {
@@ -19,7 +22,21 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
 
     if (validYears.length === 0) return {};
 
-    const xAxisData = validYears;
+    const xAxisData = validYears.map(year => formatYearLabel(year, i18n.language));
+    const labels = {
+      spring: t('seasons.spring'),
+      summer: t('seasons.summer'),
+      autumn: t('seasons.autumn'),
+      winter: t('seasons.winter'),
+      severeSummer: t('charts.disasters.heat'),
+      severeWinter: t('charts.disasters.cold'),
+      level1: t('livability.level1'),
+      level2: t('livability.level2'),
+      level3: t('livability.level3'),
+      level4: t('livability.level4'),
+      totalLivable: t('livability.totalGood'),
+      totalUnlivable: t('livability.totalBad'),
+    };
 
     // 2. 统计数据提取
     const seasonData = {
@@ -78,9 +95,9 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
 
     return {
       title: [
-        { text: '十年气候变迁宏观趋势', left: 'center', top: 0, textStyle: { color: '#0f172a', fontSize: isMobile ? 14 : 16 } },
-        { text: '📅 四季时长演变 (天)', left: isMobile ? '8%' : '4%', top: isMobile ? '7%' : '6%', textStyle: { fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 'normal' } },
-        { text: '🏡 宜居/恶劣天数结构 (天)', left: isMobile ? '8%' : '4%', top: isMobile ? '55%' : '53%', textStyle: { fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 'normal' } }
+        { text: t('charts.trend.main'), left: 'center', top: 0, textStyle: { color: '#0f172a', fontSize: isMobile ? 14 : 16 } },
+        { text: t('charts.trend.seasons'), left: isMobile ? '8%' : '4%', top: isMobile ? '7%' : '6%', textStyle: { fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 'normal' } },
+        { text: t('charts.trend.livability'), left: isMobile ? '8%' : '4%', top: isMobile ? '55%' : '53%', textStyle: { fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 'normal' } }
       ],
       tooltip: {
         trigger: 'axis',
@@ -91,8 +108,8 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
         textStyle: { color: '#0f172a' }
       },
       legend: [
-        { data: ['春季', '夏季', '秋季', '冬季', '高温预警', '寒冷预警'], top: isMobile ? '11%' : '6%', left: isMobile ? '8%' : undefined, right: isMobile ? '4%' : '4%', type: isMobile ? 'scroll' : undefined, width: isMobile ? '88%' : undefined },
-        { data: ['极度舒适', '尚可接受', '全年宜居期', '较不宜居', '极端恶劣', '全年恶劣期'], top: isMobile ? '59%' : '53%', left: isMobile ? '8%' : undefined, right: '4%', type: 'scroll', width: isMobile ? '88%' : '60%' }
+        { data: [labels.spring, labels.summer, labels.autumn, labels.winter, labels.severeSummer, labels.severeWinter], top: isMobile ? '11%' : '6%', left: isMobile ? '8%' : undefined, right: isMobile ? '4%' : '4%', type: isMobile ? 'scroll' : undefined, width: isMobile ? '88%' : undefined },
+        { data: [labels.level1, labels.level2, labels.totalLivable, labels.level3, labels.level4, labels.totalUnlivable], top: isMobile ? '59%' : '53%', left: isMobile ? '8%' : undefined, right: '4%', type: 'scroll', width: isMobile ? '88%' : '60%' }
       ],
       grid: [
         { left: isMobile ? '9%' : '4%', right: '4%', top: isMobile ? '20%' : '15%', height: isMobile ? '25%' : '30%' },
@@ -108,26 +125,26 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
       ],
       series: [
         // Grid 0: Seasons
-        { name: '春季', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.spring, itemStyle: { color: '#10b981' }, smooth: true, symbolSize: 6 },
-        { name: '夏季', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.summer, itemStyle: { color: '#ef4444' }, smooth: true, symbolSize: 6 },
-        { name: '秋季', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.autumn, itemStyle: { color: '#f59e0b' }, smooth: true, symbolSize: 6 },
-        { name: '冬季', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.winter, itemStyle: { color: '#3b82f6' }, smooth: true, symbolSize: 6 },
+        { name: labels.spring, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.spring, itemStyle: { color: '#10b981' }, smooth: true, symbolSize: 6 },
+        { name: labels.summer, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.summer, itemStyle: { color: '#ef4444' }, smooth: true, symbolSize: 6 },
+        { name: labels.autumn, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.autumn, itemStyle: { color: '#f59e0b' }, smooth: true, symbolSize: 6 },
+        { name: labels.winter, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.winter, itemStyle: { color: '#3b82f6' }, smooth: true, symbolSize: 6 },
         
-        { name: '高温预警', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeSummer, itemStyle: { color: '#991b1b' }, areaStyle: { color: 'rgba(153, 27, 27, 0.2)' }, smooth: true, symbol: 'none' },
-        { name: '寒冷预警', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeWinter, itemStyle: { color: '#1e3a8a' }, areaStyle: { color: 'rgba(30, 58, 138, 0.2)' }, smooth: true, symbol: 'none' },
+        { name: labels.severeSummer, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeSummer, itemStyle: { color: '#991b1b' }, areaStyle: { color: 'rgba(153, 27, 27, 0.2)' }, smooth: true, symbol: 'none' },
+        { name: labels.severeWinter, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeWinter, itemStyle: { color: '#1e3a8a' }, areaStyle: { color: 'rgba(30, 58, 138, 0.2)' }, smooth: true, symbol: 'none' },
 
         // Grid 1: Livability (Stacked Area for better structural perception)
-        { name: '极度舒适', type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level1, itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
-        { name: '尚可接受', type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level2, itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
-        { name: '较不宜居', type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level3, itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
-        { name: '极端恶劣', type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level4, itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
+        { name: labels.level1, type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level1, itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
+        { name: labels.level2, type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level2, itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
+        { name: labels.level3, type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level3, itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
+        { name: labels.level4, type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level4, itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
         
         // Grid 1: Trend Lines
-        { name: '全年宜居期', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalLivable, itemStyle: { color: '#047857' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 },
-        { name: '全年恶劣期', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalUnlivable, itemStyle: { color: '#b91c1c' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 }
+        { name: labels.totalLivable, type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalLivable, itemStyle: { color: '#047857' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 },
+        { name: labels.totalUnlivable, type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalUnlivable, itemStyle: { color: '#b91c1c' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 }
       ]
     };
-  }, [dataMap, isMobile]);
+  }, [dataMap, i18n.language, isMobile, t]);
 
   return (
     <div className="trend-chart" style={{ position: 'relative', width: '100%', height: '600px' }}>

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 
 export interface CityCompareData {
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export const CompareDashboard: React.FC<Props> = ({ cities }) => {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery('(max-width: 640px)');
 
   const option = useMemo(() => {
@@ -72,6 +74,23 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
     });
 
     const cityNames = stats.map(s => s.name);
+    const labels = {
+      level1: t('livability.level1'),
+      level2: t('livability.level2'),
+      level3: t('livability.level3'),
+      level4: t('livability.level4'),
+      spring: t('seasons.spring'),
+      summer: t('seasons.summer'),
+      autumn: t('seasons.autumn'),
+      winter: t('seasons.winter'),
+      heat: t('charts.disasters.heat'),
+      cold: t('charts.disasters.cold'),
+      huinan: t('charts.compare.huinan'),
+      rainy: t('charts.compare.rainy'),
+      humid: t('charts.compare.humid'),
+      dry: t('charts.compare.dry'),
+      smog: t('charts.compare.smog'),
+    };
 
     // Compute max for radar
     const maxHuinan = Math.max(30, ...stats.map(s => s.huinan));
@@ -83,10 +102,10 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
 
     return {
       title: [
-        { text: '综合宜居天数对比 (十年均值)', left: isMobile ? '50%' : '25%', top: isMobile ? '2%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
-        { text: '四季时长占比分布', left: isMobile ? '50%' : '75%', top: isMobile ? '27%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
-        { text: isMobile ? '极端气温天数压测' : '极端气温天数压测 (高温预警 vs 寒冷预警)', left: isMobile ? '50%' : '25%', top: isMobile ? '52%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
-        { text: isMobile ? '高敏异常气象对比' : '高敏异常气象对比 (雾霾/回南/汛期/极值干湿)', left: isMobile ? '50%' : '75%', top: isMobile ? '76%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } }
+        { text: t('charts.compare.livability'), left: isMobile ? '50%' : '25%', top: isMobile ? '2%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
+        { text: t('charts.compare.seasons'), left: isMobile ? '50%' : '75%', top: isMobile ? '27%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
+        { text: isMobile ? t('charts.compare.extremesShort') : t('charts.compare.extremes'), left: isMobile ? '50%' : '25%', top: isMobile ? '52%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
+        { text: isMobile ? t('charts.compare.sensitiveShort') : t('charts.compare.sensitive'), left: isMobile ? '50%' : '75%', top: isMobile ? '76%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } }
       ],
       tooltip: {
         trigger: 'axis',
@@ -98,15 +117,15 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
           params.forEach((p: any) => {
             let val = p.value;
             if (val < 0) val = -val; // Fix negative winter values
-            html += `${p.marker} ${p.seriesName}: <b>${val}</b>天<br/>`;
+            html += `${p.marker} ${p.seriesName}: <b>${val}</b>${t('common.dayUnit')}<br/>`;
           });
           return html;
         }
       },
       legend: [
-        { data: ['极度舒适', '尚可接受', '较不宜居', '极端恶劣'], top: isMobile ? '5%' : '10%', left: isMobile ? '4%' : '5%', width: isMobile ? '92%' : '40%', type: isMobile ? 'scroll' : undefined },
-        { data: ['春季', '夏季', '秋季', '冬季'], top: isMobile ? '30%' : '10%', left: isMobile ? '4%' : '55%', width: isMobile ? '92%' : '40%', type: isMobile ? 'scroll' : undefined },
-        { data: ['高温预警', '寒冷预警'], top: isMobile ? '55%' : '60%', left: isMobile ? '4%' : '5%', width: isMobile ? '92%' : '40%' }
+        { data: [labels.level1, labels.level2, labels.level3, labels.level4], top: isMobile ? '5%' : '10%', left: isMobile ? '4%' : '5%', width: isMobile ? '92%' : '40%', type: isMobile ? 'scroll' : undefined },
+        { data: [labels.spring, labels.summer, labels.autumn, labels.winter], top: isMobile ? '30%' : '10%', left: isMobile ? '4%' : '55%', width: isMobile ? '92%' : '40%', type: isMobile ? 'scroll' : undefined },
+        { data: [labels.heat, labels.cold], top: isMobile ? '55%' : '60%', left: isMobile ? '4%' : '5%', width: isMobile ? '92%' : '40%' }
       ],
       grid: [
         isMobile ? { left: '12%', right: '5%', top: '9%', height: '15%' } : { left: '5%', right: '55%', top: '20%', height: '25%' },
@@ -117,11 +136,11 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         center: isMobile ? ['50%', '90%'] : ['75%', '80%'],
         radius: isMobile ? '14%' : '30%',
         indicator: [
-          { name: '回南天', max: maxHuinan },
-          { name: '集中降雨/汛期', max: maxRainy },
-          { name: '连续潮湿', max: maxHumid },
-          { name: '连续干燥', max: maxDry },
-          { name: '重度雾霾(>75)', max: maxSmog }
+          { name: labels.huinan, max: maxHuinan },
+          { name: labels.rainy, max: maxRainy },
+          { name: labels.humid, max: maxHumid },
+          { name: labels.dry, max: maxDry },
+          { name: labels.smog, max: maxSmog }
         ],
         splitArea: { areaStyle: { color: ['#f8fafc', '#f1f5f9'] } }
       },
@@ -137,20 +156,20 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
       ],
       series: [
         // Livability
-        { name: '极度舒适', type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l1), itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
-        { name: '尚可接受', type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l2), itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
-        { name: '较不宜居', type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l3), itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
-        { name: '极端恶劣', type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l4), itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
+        { name: labels.level1, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l1), itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
+        { name: labels.level2, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l2), itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
+        { name: labels.level3, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l3), itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
+        { name: labels.level4, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l4), itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
         
         // Seasons
-        { name: '春季', type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.spring), itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
-        { name: '夏季', type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.summer), itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
-        { name: '秋季', type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.autumn), itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
-        { name: '冬季', type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.winter), itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
+        { name: labels.spring, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.spring), itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
+        { name: labels.summer, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.summer), itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
+        { name: labels.autumn, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.autumn), itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
+        { name: labels.winter, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.winter), itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
 
         // Extreme Weather
-        { name: '高温预警', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => s.severeSummer), itemStyle: { color: '#991b1b', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 40 },
-        { name: '寒冷预警', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => -s.severeWinter), itemStyle: { color: '#1e3a8a', borderRadius: [0, 0, 4, 4] }, barMaxWidth: 40 },
+        { name: labels.heat, type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => s.severeSummer), itemStyle: { color: '#991b1b', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 40 },
+        { name: labels.cold, type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => -s.severeWinter), itemStyle: { color: '#1e3a8a', borderRadius: [0, 0, 4, 4] }, barMaxWidth: 40 },
 
         // Radar
         {
@@ -164,13 +183,14 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
             trigger: 'item',
             formatter: (params: any) => {
               const vals = params.value;
-              return `<b>${params.name}</b><br/>回南天: ${vals[0]}天<br/>集中降雨: ${vals[1]}天<br/>连续潮湿: ${vals[2]}天<br/>连续干燥: ${vals[3]}天<br/>重度雾霾: ${vals[4]}天`;
+              const unit = t('common.dayUnit');
+              return `<b>${params.name}</b><br/>${labels.huinan}: ${vals[0]}${unit}<br/>${labels.rainy}: ${vals[1]}${unit}<br/>${labels.humid}: ${vals[2]}${unit}<br/>${labels.dry}: ${vals[3]}${unit}<br/>${labels.smog}: ${vals[4]}${unit}`;
             }
           }
         }
       ]
     };
-  }, [cities, isMobile]);
+  }, [cities, isMobile, t]);
 
   return (
     <div className="compare-dashboard">
