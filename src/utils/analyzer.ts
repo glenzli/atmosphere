@@ -1,3 +1,5 @@
+import { palette } from '../theme/palette';
+
 /**
  * 湿球温度计算 (Stull 经验公式)
  * @param T 干球温度 (°C)
@@ -176,11 +178,11 @@ export function evaluateLivability(
   score -= pmPenalty;
 
   // 绝对一票否决
-  if (isExtreme || score < 50) return { level: 4, label: '极端恶劣', color: '#ef4444' }; // Red 500
+  if (isExtreme || score < 50) return { level: 4, label: '极端恶劣', color: palette.summer };
   
-  if (score >= 85) return { level: 1, label: '极度舒适', color: '#10b981' }; // Emerald 500
-  if (score >= 70) return { level: 2, label: '尚可接受', color: '#3b82f6' }; // Blue 500
-  return { level: 3, label: '较不宜居', color: '#f59e0b' }; // Amber 500
+  if (score >= 85) return { level: 1, label: '极度舒适', color: palette.spring };
+  if (score >= 70) return { level: 2, label: '尚可接受', color: palette.brand };
+  return { level: 3, label: '较不宜居', color: palette.autumn };
 }
 
 /**
@@ -265,10 +267,10 @@ export function calculateSeasons(dailyData: { date: string, tAvg: number, rhAvg:
   }
 
   const colorMap: Record<string, string> = {
-    '冬季': 'rgba(186, 230, 253, 0.15)', // Sky 200 pale
-    '春季': 'rgba(187, 247, 208, 0.15)', // Green 200 pale
-    '夏季': 'rgba(254, 240, 138, 0.15)', // Yellow 200 pale
-    '秋季': 'rgba(254, 215, 170, 0.15)', // Orange 200 pale
+    '冬季': palette.winterWash,
+    '春季': palette.springWash,
+    '夏季': palette.summerWash,
+    '秋季': palette.autumnWash,
   };
 
   for (let i = 0; i < n; i++) {

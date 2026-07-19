@@ -3,6 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { formatYearLabel } from '../i18n/format';
+import { palette } from '../theme/palette';
 
 interface Props {
   dataMap: Record<string, any[]>;
@@ -91,21 +92,21 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
 
     const totalLivable = livableData.level1.map((v, i) => v + livableData.level2[i]);
     const totalUnlivable = livableData.level3.map((v, i) => v + livableData.level4[i]);
-    const axisLabel = { color: '#64748b', fontSize: isMobile ? 10 : 12 };
+    const axisLabel = { color: palette.muted, fontSize: isMobile ? 10 : 12 };
 
     return {
       title: [
-        { text: t('charts.trend.main'), left: 'center', top: 0, textStyle: { color: '#0f172a', fontSize: isMobile ? 14 : 16 } },
-        { text: t('charts.trend.seasons'), left: isMobile ? '8%' : '4%', top: isMobile ? '7%' : '6%', textStyle: { fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 'normal' } },
-        { text: t('charts.trend.livability'), left: isMobile ? '8%' : '4%', top: isMobile ? '55%' : '53%', textStyle: { fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 'normal' } }
+        { text: t('charts.trend.main'), left: 'center', top: 0, textStyle: { color: palette.heading, fontSize: isMobile ? 14 : 16 } },
+        { text: t('charts.trend.seasons'), left: isMobile ? '8%' : '4%', top: isMobile ? '7%' : '6%', textStyle: { fontSize: isMobile ? 11 : 13, color: palette.muted, fontWeight: 'normal' } },
+        { text: t('charts.trend.livability'), left: isMobile ? '8%' : '4%', top: isMobile ? '55%' : '53%', textStyle: { fontSize: isMobile ? 11 : 13, color: palette.muted, fontWeight: 'normal' } }
       ],
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' },
         confine: true,
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderColor: '#e2e8f0',
-        textStyle: { color: '#0f172a' }
+        borderColor: palette.border,
+        textStyle: { color: palette.ink }
       },
       legend: [
         { data: [labels.spring, labels.summer, labels.autumn, labels.winter, labels.severeSummer, labels.severeWinter], top: isMobile ? '11%' : '6%', left: isMobile ? '8%' : undefined, right: isMobile ? '4%' : '4%', type: isMobile ? 'scroll' : undefined, width: isMobile ? '88%' : undefined },
@@ -116,32 +117,32 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
         { left: isMobile ? '9%' : '4%', right: '4%', top: isMobile ? '68%' : '62%', height: isMobile ? '24%' : '30%' }
       ],
       xAxis: [
-        { type: 'category', data: xAxisData, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel },
-        { type: 'category', data: xAxisData, gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel }
+        { type: 'category', data: xAxisData, gridIndex: 0, axisLine: { lineStyle: { color: palette.axis } }, axisLabel },
+        { type: 'category', data: xAxisData, gridIndex: 1, axisLine: { lineStyle: { color: palette.axis } }, axisLabel }
       ],
       yAxis: [
-        { type: 'value', gridIndex: 0, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel },
-        { type: 'value', gridIndex: 1, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel }
+        { type: 'value', gridIndex: 0, splitLine: { lineStyle: { color: palette.grid } }, axisLabel },
+        { type: 'value', gridIndex: 1, splitLine: { lineStyle: { color: palette.grid } }, axisLabel }
       ],
       series: [
         // Grid 0: Seasons
-        { name: labels.spring, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.spring, itemStyle: { color: '#10b981' }, smooth: true, symbolSize: 6 },
-        { name: labels.summer, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.summer, itemStyle: { color: '#ef4444' }, smooth: true, symbolSize: 6 },
-        { name: labels.autumn, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.autumn, itemStyle: { color: '#f59e0b' }, smooth: true, symbolSize: 6 },
-        { name: labels.winter, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.winter, itemStyle: { color: '#3b82f6' }, smooth: true, symbolSize: 6 },
+        { name: labels.spring, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.spring, itemStyle: { color: palette.spring }, smooth: true, symbolSize: 6 },
+        { name: labels.summer, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.summer, itemStyle: { color: palette.summer }, smooth: true, symbolSize: 6 },
+        { name: labels.autumn, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.autumn, itemStyle: { color: palette.autumn }, smooth: true, symbolSize: 6 },
+        { name: labels.winter, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.winter, itemStyle: { color: palette.winter }, smooth: true, symbolSize: 6 },
         
-        { name: labels.severeSummer, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeSummer, itemStyle: { color: '#991b1b' }, areaStyle: { color: 'rgba(153, 27, 27, 0.2)' }, smooth: true, symbol: 'none' },
-        { name: labels.severeWinter, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeWinter, itemStyle: { color: '#1e3a8a' }, areaStyle: { color: 'rgba(30, 58, 138, 0.2)' }, smooth: true, symbol: 'none' },
+        { name: labels.severeSummer, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeSummer, itemStyle: { color: palette.heatWarning }, areaStyle: { color: palette.heatWash }, smooth: true, symbol: 'none' },
+        { name: labels.severeWinter, type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: seasonData.severeWinter, itemStyle: { color: palette.coldWarning }, areaStyle: { color: palette.coldWash }, smooth: true, symbol: 'none' },
 
         // Grid 1: Livability (Stacked Area for better structural perception)
-        { name: labels.level1, type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level1, itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
-        { name: labels.level2, type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level2, itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
-        { name: labels.level3, type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level3, itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
-        { name: labels.level4, type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level4, itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
+        { name: labels.level1, type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level1, itemStyle: { color: palette.spring }, barMaxWidth: 40 },
+        { name: labels.level2, type: 'bar', stack: 'livable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level2, itemStyle: { color: palette.brand }, barMaxWidth: 40 },
+        { name: labels.level3, type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level3, itemStyle: { color: palette.autumn }, barMaxWidth: 40 },
+        { name: labels.level4, type: 'bar', stack: 'unlivable', xAxisIndex: 1, yAxisIndex: 1, data: livableData.level4, itemStyle: { color: palette.summer }, barMaxWidth: 40 },
         
         // Grid 1: Trend Lines
-        { name: labels.totalLivable, type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalLivable, itemStyle: { color: '#047857' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 },
-        { name: labels.totalUnlivable, type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalUnlivable, itemStyle: { color: '#b91c1c' }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 }
+        { name: labels.totalLivable, type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalLivable, itemStyle: { color: palette.spring }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 },
+        { name: labels.totalUnlivable, type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: totalUnlivable, itemStyle: { color: palette.heatWarning }, smooth: true, lineStyle: { width: 3, type: 'dashed' }, symbolSize: 8, z: 10 }
       ]
     };
   }, [dataMap, i18n.language, isMobile, t]);
@@ -149,7 +150,9 @@ export const TrendChart: React.FC<Props> = ({ dataMap }) => {
   return (
     <div className="trend-chart" style={{ position: 'relative', width: '100%', height: '600px' }}>
       <ReactECharts
+        key={isMobile ? 'mobile' : 'desktop'}
         option={option}
+        notMerge={true}
         style={{ height: '100%', width: '100%' }}
         theme="light"
         opts={{ renderer: 'canvas' }}

@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { GitCompareArrows } from 'lucide-react';
+import { comparisonColors, palette } from '../theme/palette';
 
 export interface CityCompareData {
   name: string;
@@ -98,14 +100,15 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
     const maxHumid = Math.max(90, ...stats.map(s => s.humid));
     const maxDry = Math.max(90, ...stats.map(s => s.dry));
     const maxSmog = Math.max(30, ...stats.map(s => s.smog));
-    const axisLabel = { color: '#64748b', fontSize: isMobile ? 10 : 12, interval: 0, rotate: isMobile ? 25 : 0 };
+    const axisLabel = { color: palette.muted, fontSize: isMobile ? 10 : 12, interval: 0, rotate: isMobile ? 25 : 0 };
 
     return {
+      color: [...comparisonColors],
       title: [
-        { text: t('charts.compare.livability'), left: isMobile ? '50%' : '25%', top: isMobile ? '2%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
-        { text: t('charts.compare.seasons'), left: isMobile ? '50%' : '75%', top: isMobile ? '27%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
-        { text: isMobile ? t('charts.compare.extremesShort') : t('charts.compare.extremes'), left: isMobile ? '50%' : '25%', top: isMobile ? '52%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } },
-        { text: isMobile ? t('charts.compare.sensitiveShort') : t('charts.compare.sensitive'), left: isMobile ? '50%' : '75%', top: isMobile ? '76%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: '#475569' } }
+        { text: t('charts.compare.livability'), left: isMobile ? '50%' : '25%', top: isMobile ? '2%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } },
+        { text: t('charts.compare.seasons'), left: isMobile ? '50%' : '75%', top: isMobile ? '27%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } },
+        { text: isMobile ? t('charts.compare.extremesShort') : t('charts.compare.extremes'), left: isMobile ? '50%' : '25%', top: isMobile ? '52%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } },
+        { text: isMobile ? t('charts.compare.sensitiveShort') : t('charts.compare.sensitive'), left: isMobile ? '50%' : '75%', top: isMobile ? '76%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } }
       ],
       tooltip: {
         trigger: 'axis',
@@ -142,34 +145,36 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
           { name: labels.dry, max: maxDry },
           { name: labels.smog, max: maxSmog }
         ],
-        splitArea: { areaStyle: { color: ['#f8fafc', '#f1f5f9'] } }
+        axisName: { color: palette.muted },
+        splitLine: { lineStyle: { color: palette.axis } },
+        splitArea: { areaStyle: { color: [palette.surfaceSubtle, palette.brandSoft] } }
       },
       xAxis: [
-        { type: 'category', data: cityNames, gridIndex: 0, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel },
-        { type: 'category', data: cityNames, gridIndex: 1, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel },
-        { type: 'category', data: cityNames, gridIndex: 2, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel }
+        { type: 'category', data: cityNames, gridIndex: 0, axisLine: { lineStyle: { color: palette.axis } }, axisLabel },
+        { type: 'category', data: cityNames, gridIndex: 1, axisLine: { lineStyle: { color: palette.axis } }, axisLabel },
+        { type: 'category', data: cityNames, gridIndex: 2, axisLine: { lineStyle: { color: palette.axis } }, axisLabel }
       ],
       yAxis: [
-        { type: 'value', gridIndex: 0, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: isMobile ? 10 : 12 } },
-        { type: 'value', gridIndex: 1, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: isMobile ? 10 : 12 } },
-        { type: 'value', gridIndex: 2, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: isMobile ? 10 : 12 } }
+        { type: 'value', gridIndex: 0, splitLine: { lineStyle: { color: palette.grid } }, axisLabel: { color: palette.muted, fontSize: isMobile ? 10 : 12 } },
+        { type: 'value', gridIndex: 1, splitLine: { lineStyle: { color: palette.grid } }, axisLabel: { color: palette.muted, fontSize: isMobile ? 10 : 12 } },
+        { type: 'value', gridIndex: 2, splitLine: { lineStyle: { color: palette.grid } }, axisLabel: { color: palette.muted, fontSize: isMobile ? 10 : 12 } }
       ],
       series: [
         // Livability
-        { name: labels.level1, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l1), itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
-        { name: labels.level2, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l2), itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
-        { name: labels.level3, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l3), itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
-        { name: labels.level4, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l4), itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
+        { name: labels.level1, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l1), itemStyle: { color: palette.spring }, barMaxWidth: 40 },
+        { name: labels.level2, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l2), itemStyle: { color: palette.brand }, barMaxWidth: 40 },
+        { name: labels.level3, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l3), itemStyle: { color: palette.autumn }, barMaxWidth: 40 },
+        { name: labels.level4, type: 'bar', stack: 'livability', xAxisIndex: 0, yAxisIndex: 0, data: stats.map(s => s.l4), itemStyle: { color: palette.summer }, barMaxWidth: 40 },
         
         // Seasons
-        { name: labels.spring, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.spring), itemStyle: { color: '#10b981' }, barMaxWidth: 40 },
-        { name: labels.summer, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.summer), itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
-        { name: labels.autumn, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.autumn), itemStyle: { color: '#f59e0b' }, barMaxWidth: 40 },
-        { name: labels.winter, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.winter), itemStyle: { color: '#3b82f6' }, barMaxWidth: 40 },
+        { name: labels.spring, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.spring), itemStyle: { color: palette.spring }, barMaxWidth: 40 },
+        { name: labels.summer, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.summer), itemStyle: { color: palette.summer }, barMaxWidth: 40 },
+        { name: labels.autumn, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.autumn), itemStyle: { color: palette.autumn }, barMaxWidth: 40 },
+        { name: labels.winter, type: 'bar', stack: 'seasons', xAxisIndex: 1, yAxisIndex: 1, data: stats.map(s => s.winter), itemStyle: { color: palette.winter }, barMaxWidth: 40 },
 
         // Extreme Weather
-        { name: labels.heat, type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => s.severeSummer), itemStyle: { color: '#991b1b', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 40 },
-        { name: labels.cold, type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => -s.severeWinter), itemStyle: { color: '#1e3a8a', borderRadius: [0, 0, 4, 4] }, barMaxWidth: 40 },
+        { name: labels.heat, type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => s.severeSummer), itemStyle: { color: palette.heatWarning, borderRadius: [4, 4, 0, 0] }, barMaxWidth: 40 },
+        { name: labels.cold, type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: stats.map(s => -s.severeWinter), itemStyle: { color: palette.coldWarning, borderRadius: [0, 0, 4, 4] }, barMaxWidth: 40 },
 
         // Radar
         {
@@ -192,10 +197,21 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
     };
   }, [cities, isMobile, t]);
 
+  if (!cities || cities.length < 2) {
+    return (
+      <div className="compare-empty-state" role="status">
+        <span aria-hidden="true"><GitCompareArrows size={24} strokeWidth={1.8} /></span>
+        <p>{t('charts.compare.emptyState')}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="compare-dashboard">
       <ReactECharts
+        key={isMobile ? 'mobile' : 'desktop'}
         option={option}
+        notMerge={true}
         style={{ height: '100%', width: '100%' }}
         theme="light"
         opts={{ renderer: 'canvas' }}
