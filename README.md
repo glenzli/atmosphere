@@ -12,17 +12,17 @@
 
 ## 中文
 
-Atmosphere 是一个基于历史天气数据的城市气候分析工具。它按日整理近十年的气温、湿度、降水、风速和 PM2.5，用于查看年度变化、长期趋势、城市差异和指定旅行日期的历史分布。
+Atmosphere 是一个城市历史气候查看和比较工具。页面读取近十年的逐日气温、湿度、降水、风速和 PM2.5，提供按年查看、十年汇总、城市比较和旅行日期统计。
 
-界面支持中文和英文，可通过 `?lang=zh` 或 `?lang=en` 指定初始语言。网站采用响应式布局，也可以从 Chrome 等支持 PWA 的浏览器安装到桌面或主屏幕。
+界面支持中文、英文以及桌面和移动端布局，可通过 `?lang=zh` 或 `?lang=en` 指定初始语言。Chrome 等浏览器可以将网站安装到桌面或主屏幕。
 
 ### 当前功能
 
-- 搜索全球城市并读取 Open-Meteo 历史数据。
+- 按城市名查询 Open-Meteo 地理编码和历史数据。
 - 按年份查看气温、湿球温度、表观温度、湿度、降水、风速、PM2.5、季节划分和宜居等级。
-- 汇总近十年的季节长度、宜居天数和高低温变化。
+- 查看近十年的季节长度、宜居天数和温度统计。
 - 同时比较最多 8 个城市。
-- 根据历史同期数据、年份权重和 ENSO 状态计算旅行日期的气温范围、降水概率、空气质量和天气风险。
+- 按选定日期汇总历史同期数据，并按年份和 ENSO 状态调整权重。
 - 按怕热、怕冷和敏感偏好调整宜居评分。
 
 ### 界面
@@ -45,9 +45,9 @@ Atmosphere 是一个基于历史天气数据的城市气候分析工具。它按
 
 ### 数据与服务
 
-- 历史天气、空气质量和城市地理编码来自 Open-Meteo。
-- 中文城市名通过 MyMemory 翻译后提交给 Open-Meteo Geocoding。
-- 历史 ENSO 年份标签保存在前端；当前 ENSO 状态由可选的 `GET /api/enso` 接口读取 NOAA CPC 数据。
+- 历史天气、空气质量和城市查询来自 Open-Meteo。
+- 中文城市名先通过 MyMemory 翻译，再提交给 Open-Meteo Geocoding。
+- 历史 ENSO 年份标签根据 NOAA/PSL ONI 数据生成并保存在前端；可选的 `GET /api/enso` 接口从 NOAA CPC 读取当前状态。
 - 历史天气缓存在 IndexedDB；语言、最近搜索和旅行日期等界面状态保存在 localStorage。
 
 浏览器直接请求历史天气、空气质量和地理编码。Express 服务只提供当前 ENSO 状态；该接口不可用时，旅行日期页面允许手动选择 ENSO 状态。
@@ -82,10 +82,9 @@ npm run preview
 
 ### 当前限制
 
-- 当前数据范围是历史日值，页面未接入实时天气和预报数据。季节、宜居等级和旅行日期结果由历史数据与项目内规则计算，用作统计参考。
-- PM2.5 数据缺失时保持为空，天气分析仍可继续。
+- 页面使用历史日值，当前未接入实时天气和天气预报。季节、宜居等级和旅行日期结果由历史数据与项目内规则计算。
+- 空气质量请求失败时，当前实现会把缺失的 PM2.5 记为 `0`，可能影响空气质量显示和宜居评分。
 - 地理编码当前使用第一个匹配结果；同名城市需要核对地区和国家。
-- 当前 ENSO 自动识别依赖本地 Express 接口，接口不可用时使用手动选择。
 - 安装版仍通过网络加载页面和第三方数据。IndexedDB 只保存已经读取的历史天气。
 
 ### 代码导航
@@ -105,17 +104,17 @@ npm run preview
 
 ## English
 
-Atmosphere is a city climate analysis tool based on historical weather data. It organizes roughly ten years of daily temperature, humidity, precipitation, wind, and PM2.5 data for yearly inspection, long-term trends, city comparison, and date-range estimates for travel.
+Atmosphere is a tool for viewing and comparing city climate history. It reads roughly ten years of daily temperature, humidity, precipitation, wind, and PM2.5 data for yearly views, ten-year summaries, city comparison, and travel-date statistics.
 
-The interface supports Chinese and English. Use `?lang=zh` or `?lang=en` to select the initial language. The responsive web app can also be installed from Chrome and other browsers that support PWAs.
+The interface supports Chinese and English on desktop and mobile layouts. Use `?lang=zh` or `?lang=en` to select the initial language. Chrome and other browsers can install the site on the desktop or home screen.
 
 ### Current features
 
-- Search for cities worldwide and load historical data from Open-Meteo.
+- Query Open-Meteo geocoding and historical data by city name.
 - Inspect temperature, wet-bulb temperature, apparent temperature, humidity, precipitation, wind, PM2.5, season assignments, and livability levels by year.
-- Summarize season lengths, livable days, and temperature changes across roughly ten years.
+- View season lengths, livable days, and temperature statistics across roughly ten years.
 - Compare up to 8 cities.
-- Calculate temperature ranges, precipitation probability, air quality, and weather risks for travel dates from historical date matches, year weighting, and ENSO status.
+- Summarize matching historical dates for a selected range, with weights adjusted by year and ENSO status.
 - Adjust livability scoring for heat, cold, and general sensitivity preferences.
 
 ### Interface
@@ -138,9 +137,9 @@ The interface supports Chinese and English. Use `?lang=zh` or `?lang=en` to sele
 
 ### Data and services
 
-- Historical weather, air quality, and city geocoding come from Open-Meteo.
+- Historical weather, air quality, and city search come from Open-Meteo.
 - Chinese city names are translated through MyMemory before the Open-Meteo Geocoding request.
-- Historical ENSO year labels are bundled with the frontend. The optional `GET /api/enso` endpoint reads the current ENSO state from NOAA CPC data.
+- Historical ENSO year labels are generated from NOAA/PSL ONI data and bundled with the frontend. The optional `GET /api/enso` endpoint reads the current status from NOAA CPC.
 - Historical weather is cached in IndexedDB. Language, recent searches, travel dates, and other interface state use localStorage.
 
 The browser requests historical weather, air quality, and geocoding directly. The Express service only supplies the current ENSO status. When that endpoint is unavailable, the travel-date view allows manual ENSO selection.
@@ -175,10 +174,9 @@ Build output is written to `dist/`.
 
 ### Current limitations
 
-- The current data scope is daily history, with no current-condition or forecast feed. Season assignments, livability levels, and travel-date results are calculated from historical data and repository-defined rules as statistical references.
-- Missing PM2.5 data remains empty while weather analysis continues.
+- The page uses daily history and currently has no current-condition or weather-forecast feed. Season assignments, livability levels, and travel-date results are calculated from historical data and repository-defined rules.
+- When the air-quality request fails, the current implementation records missing PM2.5 as `0`. This can affect the air-quality display and livability score.
 - Geocoding currently uses the first result. Ambiguous city names require checking the region and country.
-- Automatic current ENSO detection depends on the local Express endpoint. Manual selection is available when the endpoint cannot be reached.
 - The installed app loads the page and third-party data over the network. IndexedDB only stores historical weather that has already been loaded.
 
 ### Code map
