@@ -59,6 +59,7 @@ Atmosphere 是一个面向城市选择、旅居判断和旅行准备的气候宜
 - **旅行窗口推演**：面向未来日期做历史统计预测，给出降雨、体感、灾害和装备建议。
 - **中英双语界面**：基于 `i18next` / `react-i18next`，支持语言持久化和 URL 参数识别。
 - **响应式体验**：桌面端保留大图表信息密度，移动端调整为更适合触控和纵向阅读的布局。
+- **可安装网页应用**：在支持的 Chrome 等浏览器中可安装到桌面或主屏幕，并以独立窗口运行。
 
 ### 数据模型
 
@@ -203,6 +204,7 @@ Choose a future travel window and Atmosphere infers expected real-feel temperatu
 - **Travel-window inference**: Uses historical statistics for future date windows and produces rainfall, real-feel, risk, and packing guidance.
 - **Bilingual UI**: Built with `i18next` / `react-i18next`, with language persistence and URL parameter recognition.
 - **Responsive experience**: Keeps dense chart analysis on desktop while adapting controls and chart modes for mobile reading.
+- **Installable web app**: Can be installed from supported browsers such as Chrome and launched in a standalone window.
 
 ### Data Model
 
