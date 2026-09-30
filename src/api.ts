@@ -5,15 +5,27 @@ export async function clearCache() {
   await clear();
 }
 
-async function translateCityName(name: string) {
-  if (!/[^\x00-\x7F]/.test(name)) return name;
+export interface GeoCity {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  admin1?: string;
+  admin2?: string;
+}
+
+async function translateCityName(name: string, signal?: AbortSignal) {
+  if (!/[^\u0020-\u007E]/.test(name)) return name;
 
   try {
     const params = new URLSearchParams({
       q: name,
       langpair: 'zh|en'
     });
-    const res = await fetch(`https://api.mymemory.translated.net/get?${params}`);
+    const res = await fetch(`https://api.mymemory.translated.net/get?${params}`, {
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(5000)]) : AbortSignal.timeout(5000)
+    });
     if (!res.ok) return name;
     const data = await res.json();
     return data?.responseData?.translatedText || name;
@@ -22,24 +34,25 @@ async function translateCityName(name: string) {
   }
 }
 
-export async function geocodeCity(name: string) {
-  const query = await translateCityName(name);
+export async function geocodeCities(name: string, language = 'en', signal?: AbortSignal): Promise<GeoCity[]> {
+  const query = await translateCityName(name, signal);
+  signal?.throwIfAborted();
   const params = new URLSearchParams({
     name: query,
-    count: '1',
-    language: 'en',
+    count: '5',
+    language: language.startsWith('zh') ? 'zh' : 'en',
     format: 'json'
   });
-  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`);
+  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`, { signal });
   if (!res.ok) throw new Error('Geocoding failed');
   const data = await res.json();
   if (!data.results || data.results.length === 0) throw new Error('City not found');
-  return data.results[0]; // { latitude, longitude, name, country }
+  return data.results;
 }
 
-export async function fetchEnsoStatus() {
+export async function fetchEnsoStatus(signal?: AbortSignal) {
   try {
-    const res = await fetch('/api/enso');
+    const res = await fetch('/api/enso', { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error('Network error');
     return await res.json();
   } catch {
@@ -55,7 +68,7 @@ function readPm25Hourly(data: unknown): unknown[] | null {
   return Array.isArray(pm25) ? pm25 : null;
 }
 
-async function fetchOpenMeteoWeather(lat: number, lon: number, startDate: string, endDate: string) {
+async function fetchOpenMeteoWeather(lat: number, lon: number, startDate: string, endDate: string, signal?: AbortSignal) {
   const weatherParams = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -79,9 +92,11 @@ async function fetchOpenMeteoWeather(lat: number, lon: number, startDate: string
   const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?${airQualityParams}`;
 
   const [weatherRes, airQualityRes] = await Promise.all([
-    fetch(weatherUrl),
-    fetch(airQualityUrl).catch(() => null)
+    fetch(weatherUrl, { signal }),
+    fetch(airQualityUrl, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000) }).catch(() => null)
   ]);
+
+  signal?.throwIfAborted();
 
   if (!weatherRes.ok) throw new Error('Weather data fetch failed');
 
@@ -107,7 +122,7 @@ async function fetchOpenMeteoWeather(lat: number, lon: number, startDate: string
   return data;
 }
 
-export async function fetchHistoricalData(lat: number, lon: number, years = 10) {
+export async function fetchHistoricalData(lat: number, lon: number, years = 10, signal?: AbortSignal) {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setFullYear(endDate.getFullYear() - years);
@@ -116,14 +131,21 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10) 
   const startStr = startDate.toISOString().split('T')[0];
   const endStr = endDate.toISOString().split('T')[0];
 
-  const cacheKey = `weather_v3_${lat.toFixed(3)}_${lon.toFixed(3)}_${years}_${endStr}`;
-  let weatherData = await get(cacheKey);
+  // v3 caches may contain fabricated zero PM2.5 values from a failed air request.
+  // Keep them intact, but refetch rather than presenting those values as observations.
+  const cacheKey = `weather_v4_${lat.toFixed(3)}_${lon.toFixed(3)}_${years}_${endStr}`;
+  let weatherData;
+  try { weatherData = await get(cacheKey); } catch { /* Storage may be unavailable. */ }
+  signal?.throwIfAborted();
   let isCached = true;
+  let cacheStored = Boolean(weatherData);
 
   if (!weatherData) {
     isCached = false;
-    weatherData = await fetchOpenMeteoWeather(lat, lon, startStr, endStr);
-    await set(cacheKey, weatherData);
+    weatherData = await fetchOpenMeteoWeather(lat, lon, startStr, endStr, signal);
+    signal?.throwIfAborted();
+    // Cache availability must not prevent a successful climate analysis.
+    try { await set(cacheKey, weatherData); cacheStored = true; } catch { /* Use the downloaded data without caching. */ }
   }
 
   // Aggregate data and extract full years
@@ -153,7 +175,7 @@ export async function fetchHistoricalData(lat: number, lon: number, years = 10) 
     resultMap[`${year}年`] = processDataset(yearly[year]);
   }
 
-  return { data: resultMap, isCached };
+  return { data: resultMap, isCached, cacheStored };
 }
 
 function applySpells(dataset: any[]) {
@@ -258,7 +280,7 @@ function aggregateByDayOfYear(weatherData: any) {
       if (rh < rhMin) rhMin = rh;
 
       const pmVal = pm25Hourly[i * 24 + h];
-      if (pmVal !== null && pmVal !== undefined) {
+      if (typeof pmVal === 'number' && Number.isFinite(pmVal) && pmVal >= 0) {
         pm25Sum += pmVal;
         validPm25Hours++;
         if (pmVal > pm25Max) pm25Max = pmVal;
@@ -270,8 +292,8 @@ function aggregateByDayOfYear(weatherData: any) {
     dailyTwMin.push(twMin === Infinity ? 0 : twMin);
     dailyRhMax.push(rhMax === -Infinity ? 0 : rhMax);
     dailyRhMin.push(rhMin === Infinity ? 0 : rhMin);
-    dailyPm25Avg.push(validPm25Hours > 0 ? pm25Sum / validPm25Hours : 0);
-    dailyPm25Max.push(pm25Max === -Infinity ? 0 : pm25Max);
+    dailyPm25Avg.push(validPm25Hours > 0 ? pm25Sum / validPm25Hours : null);
+    dailyPm25Max.push(pm25Max === -Infinity ? null : pm25Max);
   }
 
   const daysMap = new Map();
@@ -282,15 +304,15 @@ function aggregateByDayOfYear(weatherData: any) {
     precipSum: 0, windSum: 0,
     twSum: 0, twMaxSum: 0, twMinSum: 0,
     rhSum: 0, rhMaxSum: 0, rhMinSum: 0, 
-    pm25AvgSum: 0, pm25MaxSum: 0,
+    pm25AvgSum: 0, pm25MaxSum: 0, pm25Count: 0,
     count: 0
   });
 
   for (let i = 0; i < time.length; i++) {
     const dateStr = time[i];
     const year = dateStr.substring(0, 4);
-    const dateObj = new Date(dateStr);
-    const mmdd = `${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+    // Provider dates are local calendar labels, not UTC timestamps to reinterpret.
+    const mmdd = dateStr.substring(5);
     
     if (mmdd === '02-29') continue;
 
@@ -315,8 +337,11 @@ function aggregateByDayOfYear(weatherData: any) {
       entry.rhSum += dailyRh[i];
       entry.rhMaxSum += dailyRhMax[i];
       entry.rhMinSum += dailyRhMin[i];
-      entry.pm25AvgSum += dailyPm25Avg[i];
-      entry.pm25MaxSum += dailyPm25Max[i];
+      if (dailyPm25Avg[i] !== null) {
+        entry.pm25AvgSum += dailyPm25Avg[i];
+        entry.pm25MaxSum += dailyPm25Max[i];
+        entry.pm25Count++;
+      }
       entry.count += 1;
 
       yearEntry.tAvgSum += temperature_2m_mean[i];
@@ -330,8 +355,11 @@ function aggregateByDayOfYear(weatherData: any) {
       yearEntry.rhSum += dailyRh[i];
       yearEntry.rhMaxSum += dailyRhMax[i];
       yearEntry.rhMinSum += dailyRhMin[i];
-      yearEntry.pm25AvgSum += dailyPm25Avg[i];
-      yearEntry.pm25MaxSum += dailyPm25Max[i];
+      if (dailyPm25Avg[i] !== null) {
+        yearEntry.pm25AvgSum += dailyPm25Avg[i];
+        yearEntry.pm25MaxSum += dailyPm25Max[i];
+        yearEntry.pm25Count++;
+      }
       yearEntry.count += 1;
     }
   }
@@ -349,8 +377,8 @@ function aggregateByDayOfYear(weatherData: any) {
     rhAvg: Number((e.rhSum / e.count).toFixed(1)),
     rhMax: Number((e.rhMaxSum / e.count).toFixed(1)),
     rhMin: Number((e.rhMinSum / e.count).toFixed(1)),
-    pm25Avg: Number((e.pm25AvgSum / e.count).toFixed(1)),
-    pm25Max: Number((e.pm25MaxSum / e.count).toFixed(1)),
+    pm25Avg: e.pm25Count ? Number((e.pm25AvgSum / e.pm25Count).toFixed(1)) : null,
+    pm25Max: e.pm25Count ? Number((e.pm25MaxSum / e.pm25Count).toFixed(1)) : null,
     dewPoint: Number(dewPoint(e.tAvgSum / e.count, e.rhSum / e.count).toFixed(1)),
     at: Number(apparentTemperature(e.tAvgSum / e.count, e.rhSum / e.count, e.windSum / e.count).toFixed(1)),
   });

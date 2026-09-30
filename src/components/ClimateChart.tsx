@@ -27,8 +27,8 @@ interface ClimateData {
   isRainySeason?: boolean;
   isSevereSummer?: boolean;
   isSevereWinter?: boolean;
-  pm25Avg?: number;
-  pm25Max?: number;
+  pm25Avg?: number | null;
+  pm25Max?: number | null;
   livability: { level: number, label: string, color: string } | null;
 }
 
@@ -75,8 +75,8 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
     const twDiff = data.map(d => Number((d.twMax - d.twMin).toFixed(1)));
 
     const precipAvg = data.map(d => d.precipAvg);
-    const pm25Avg = data.map(d => d.pm25Avg || 0);
-    const pm25Max = data.map(d => d.pm25Max || 0);
+    const pm25Avg = data.map(d => d.pm25Avg ?? null);
+    const pm25Max = data.map(d => d.pm25Max ?? null);
     const rhAvg = data.map(d => d.rhAvg || 0);
     const rhMax = data.map(d => d.rhMax || 0);
     const rhMin = data.map(d => d.rhMin || 0);
@@ -194,6 +194,7 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
     };
 
     const formatPointTooltip = (params: any) => {
+      if (!params.length || !data[params[0].dataIndex]) return t('common.noData');
       let html = `<div style="margin-bottom:4px;font-weight:bold;border-bottom:1px solid ${palette.axis};padding-bottom:4px">${params[0].axisValue}</div>`;
       const dataIndex = params[0].dataIndex;
       const pointData = data[dataIndex];
@@ -240,9 +241,11 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
       const precipLevel = t(`charts.precipLevels.${precipLevelKey(pointData.precipAvg)}`);
       html += `${t('charts.climate.tooltip.precip')}: <b>${precipLevel}</b> (${pointData.precipAvg} mm)<br/>`;
 
-      if (pointData.pm25Avg !== undefined) {
+      if (pointData.pm25Avg != null) {
         const pmColor = airQualityColor(pointData.pm25Avg);
         html += `${t('charts.climate.tooltip.air')}: <b style="color:${pmColor}">${pointData.pm25Avg}</b> (${t('charts.climate.tooltip.peak')}: ${pointData.pm25Max})<br/>`;
+      } else {
+        html += `${t('charts.climate.tooltip.air')}: ${t('common.noData')}<br/>`;
       }
 
       return html;
@@ -260,6 +263,7 @@ export const ClimateChart: React.FC<Props> = ({ data }) => {
     const monthAxisLabel = {
       color: palette.muted,
       fontSize: 10,
+      interval: (_index: number, value: string) => value.endsWith('-01') && Number(value.slice(0, 2)) % 2 === 1,
       formatter: (value: string) => formatMonthLabel(t, value)
     };
 

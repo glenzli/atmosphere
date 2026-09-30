@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { resources, type SupportedLanguage } from './resources';
+import { readLocalValue, saveLocalValue } from '../utils/storage';
 
 const storageKey = 'atmosphere_language';
 
@@ -34,7 +35,7 @@ function syncUrlLanguageParam(language: SupportedLanguage) {
 }
 
 const urlLanguage = getUrlLanguage();
-const savedLanguage = normalizeLanguage(localStorage.getItem(storageKey));
+const savedLanguage = normalizeLanguage(readLocalValue(storageKey));
 const browserLanguage = normalizeLanguage(navigator.language);
 const initialLanguage = urlLanguage || savedLanguage || browserLanguage || 'zh-CN';
 
@@ -52,7 +53,7 @@ i18n
 function syncLanguageAttributes(language: string) {
   const normalized = normalizeLanguage(language) || 'zh-CN';
   document.documentElement.lang = normalized;
-  localStorage.setItem(storageKey, normalized);
+  saveLocalValue(storageKey, normalized);
   syncUrlLanguageParam(normalized);
 }
 

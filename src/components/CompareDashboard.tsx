@@ -6,6 +6,8 @@ import { GitCompareArrows } from 'lucide-react';
 import { comparisonColors, palette } from '../theme/palette';
 
 export interface CityCompareData {
+  id?: number;
+  location?: string;
   name: string;
   dataMap: Record<string, any[]>;
 }
@@ -24,11 +26,13 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
     const stats = cities.map(city => {
       const validYears = Object.keys(city.dataMap).filter(year => city.dataMap[year].length >= 350);
       const yearsCount = validYears.length || 1;
+      const airYears = validYears.filter(year => city.dataMap[year].every(day => typeof day.pm25Avg === 'number' && Number.isFinite(day.pm25Avg)));
+      const airSmogDays = airYears.reduce((sum, year) => sum + city.dataMap[year].filter(day => day.pm25Avg > 75).length, 0);
       
       let sp = 0, su = 0, au = 0, wi = 0;
       let ss = 0, sw = 0; 
       let l1 = 0, l2 = 0, l3 = 0, l4 = 0;
-      let huinan = 0, rainy = 0, humid = 0, dry = 0, smog = 0;
+      let huinan = 0, rainy = 0, humid = 0, dry = 0;
       let rhAvgSum = 0;
       let totalDays = 0;
 
@@ -49,7 +53,6 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
           if (d.isRainySeason) rainy++;
           if (d.isHumidSpell) humid++;
           if (d.isDrySpell) dry++;
-          if (d.pm25Avg > 75) smog++;
           rhAvgSum += (d.rhAvg || 0);
         });
       });
@@ -70,7 +73,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         rainy: Math.round(rainy / yearsCount),
         humid: Math.round(humid / yearsCount),
         dry: Math.round(dry / yearsCount),
-        smog: Math.round(smog / yearsCount),
+        smog: airYears.length ? Math.round(airSmogDays / airYears.length) : null,
         rhAvg: Math.round(rhAvgSum / (totalDays || 1))
       };
     });
@@ -99,7 +102,8 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
     const maxRainy = Math.max(60, ...stats.map(s => s.rainy));
     const maxHumid = Math.max(90, ...stats.map(s => s.humid));
     const maxDry = Math.max(90, ...stats.map(s => s.dry));
-    const maxSmog = Math.max(30, ...stats.map(s => s.smog));
+    const showSmog = stats.every(city => city.smog !== null);
+    const maxSmog = Math.max(30, ...stats.map(s => s.smog ?? 0));
     const axisLabel = { color: palette.muted, fontSize: isMobile ? 10 : 12, interval: 0, rotate: isMobile ? 25 : 0 };
 
     return {
@@ -137,15 +141,15 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
       ],
       radar: {
         center: isMobile ? ['50%', '90%'] : ['75%', '80%'],
-        radius: isMobile ? '14%' : '30%',
+        radius: isMobile ? 60 : '30%',
         indicator: [
           { name: labels.huinan, max: maxHuinan },
           { name: labels.rainy, max: maxRainy },
           { name: labels.humid, max: maxHumid },
           { name: labels.dry, max: maxDry },
-          { name: labels.smog, max: maxSmog }
+          ...(showSmog ? [{ name: labels.smog, max: maxSmog }] : [])
         ],
-        axisName: { color: palette.muted },
+        axisName: { formatter: (name: string) => isMobile ? name.replace(/(.{1,12})(?:\s|$)/g, '$1\n').trim() : name, color: palette.muted, fontSize: isMobile ? 10 : 12, ...(isMobile ? { width: 84, overflow: 'break' as const, lineHeight: 14 } : {}) },
         splitLine: { lineStyle: { color: palette.axis } },
         splitArea: { areaStyle: { color: [palette.surfaceSubtle, palette.brandSoft] } }
       },
@@ -180,7 +184,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         {
           type: 'radar',
           data: stats.map((s) => ({
-            value: [s.huinan, s.rainy, s.humid, s.dry, s.smog],
+            value: [s.huinan, s.rainy, s.humid, s.dry, ...(showSmog ? [s.smog] : [])],
             name: s.name,
             areaStyle: { opacity: 0.1 }
           })),
@@ -189,7 +193,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
             formatter: (params: any) => {
               const vals = params.value;
               const unit = t('common.dayUnit');
-              return `<b>${params.name}</b><br/>${labels.huinan}: ${vals[0]}${unit}<br/>${labels.rainy}: ${vals[1]}${unit}<br/>${labels.humid}: ${vals[2]}${unit}<br/>${labels.dry}: ${vals[3]}${unit}<br/>${labels.smog}: ${vals[4]}${unit}`;
+              return `<b>${params.name}</b><br/>${labels.huinan}: ${vals[0]}${unit}<br/>${labels.rainy}: ${vals[1]}${unit}<br/>${labels.humid}: ${vals[2]}${unit}<br/>${labels.dry}: ${vals[3]}${unit}${showSmog ? `<br/>${labels.smog}: ${vals[4]}${unit}` : ''}`;
             }
           }
         }
@@ -207,7 +211,9 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
   }
 
   return (
-    <div className="compare-dashboard">
+    <div className="compare-chart-section">
+      {cities.some(city => Object.values(city.dataMap).some(days => days.some(day => day.pm25Avg == null))) && <p className="helper-copy air-data-note">{t('charts.compare.airLimited')}</p>}
+      <div className="compare-dashboard">
       <ReactECharts
         key={isMobile ? 'mobile' : 'desktop'}
         option={option}
@@ -216,6 +222,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
         theme="light"
         opts={{ renderer: 'canvas' }}
       />
+      </div>
     </div>
   );
 };

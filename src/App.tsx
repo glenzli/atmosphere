@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   CalendarDays,
   CircleAlert,
+  Check,
   CloudSun,
-  Database,
   Eye,
   Flame,
   GitCompareArrows,
@@ -18,14 +18,15 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Snowflake,
-  Trash2,
   TrendingUp,
   X,
 } from 'lucide-react';
 import { ClimateChart } from './components/ClimateChart';
 import { TrendChart } from './components/TrendChart';
 import { CompareDashboard, type CityCompareData } from './components/CompareDashboard';
-import { geocodeCity, fetchHistoricalData, clearCache } from './api';
+import { geocodeCities, fetchHistoricalData, type GeoCity } from './api';
+import { SettingsDialog } from './components/SettingsDialog';
+import { readCityList, saveLocalValue } from './utils/storage';
 import { applyLivabilityPreference, type PreferenceConfig, defaultPreference } from './utils/analyzer';
 import { Predictor } from './components/Predictor';
 import { formatLivability, formatSeason, formatYearLabel } from './i18n/format';
@@ -44,82 +45,110 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState(() => t('app.loadingDefault'));
+  const [loadingMsg, setLoadingMsg] = useState('app.loadingDefault');
+  const [notice, setNotice] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<GeoCity[]>([]);
+  const [candidateQuery, setCandidateQuery] = useState('');
+  const request = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [dataMap, setDataMap] = useState<Record<string, any[]> | null>(null);
+  const [rawData, setRawData] = useState<Awaited<ReturnType<typeof fetchHistoricalData>>['data'] | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [showConfig, setShowConfig] = useState(false);
-  const [cityInfo, setCityInfo] = useState<any>(null);
+  const [cityInfo, setCityInfo] = useState<GeoCity | null>(null);
   const [compareCities, setCompareCities] = useState<CityCompareData[]>([]);
   const [preference, setPreference] = useState<PreferenceConfig>(defaultPreference);
-  const [cachedCities, setCachedCities] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('cached_cities') || '[]'); } catch { return []; }
-  });
-  const [recentCities, setRecentCities] = useState<string[]>(() => {
+  const [cachedCities, setCachedCities] = useState(() => readCityList('cached_cities'));
+  const [recentCities, setRecentCities] = useState(() => readCityList('recent_cities', i18n.language.startsWith('zh') ? ['深圳', '北京', '海口', '昆明'] : ['Shenzhen', 'Beijing', 'Haikou', 'Kunming']));
+
+  const dataMap = useMemo(() => rawData ? applyLivabilityPreference(rawData, preference) : null, [rawData, preference]);
+  const adjustedCompareCities = useMemo(() => compareCities.map(item => ({ ...item, dataMap: applyLivabilityPreference(item.dataMap, preference) })), [compareCities, preference]);
+
+  React.useEffect(() => () => request.current?.abort(), []);
+
+  const cancelSearch = () => {
+    request.current?.abort();
+    request.current = null;
+    setLoading(false);
+    setCandidates([]);
+    setNotice('app.searchCancelled');
+  };
+
+  const beginSearch = (message: string) => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setLoading(true);
+    setLoadingMsg(message);
+    setCandidates([]);
+    setError(null);
+    setNotice(null);
+    return { controller, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]) };
+  };
+
+  const reportError = (err: unknown) => {
+    if (err instanceof Error && err.message === 'City not found') setError('app.cityNotFound');
+    else if (err instanceof Error && err.name === 'TimeoutError') setError('app.searchTimeout');
+    else setError('app.fetchError');
+  };
+
+  const loadCity = async (geo: GeoCity, query: string) => {
+    const { controller, signal } = beginSearch('app.loadingRemote');
     try {
-      const saved = localStorage.getItem('recent_cities');
-      return saved ? JSON.parse(saved) : (i18n.language.startsWith('zh') ? ['深圳', '北京', '海口', '昆明'] : ['Shenzhen', 'Beijing', 'Haikou', 'Kunming']);
-    } catch { return []; }
-  });
-
-  React.useEffect(() => {
-    if (dataMap) {
-      setDataMap(applyLivabilityPreference(dataMap, preference));
+      const { data, cacheStored } = await fetchHistoricalData(geo.latitude, geo.longitude, 10, signal);
+      signal.throwIfAborted();
+      if (Object.keys(data).length === 0) throw new Error('No weather data');
+      setCityInfo(geo);
+      setCity(query);
+      setRawData(data);
+      const years = Object.keys(data).sort((a, b) => Number(b.replace('年', '')) - Number(a.replace('年', '')));
+      setSelectedYear(years[0]);
+      setRecentCities(previous => {
+        const next = [query, ...previous.filter(item => item !== query)].slice(0, 8);
+        saveLocalValue('recent_cities', JSON.stringify(next));
+        return next;
+      });
+      if (cacheStored) setCachedCities(previous => {
+        const next = previous.includes(query) ? previous : [...previous, query];
+        saveLocalValue('cached_cities', JSON.stringify(next));
+        return next;
+      });
+    } catch (err) {
+      if (!controller.signal.aborted) reportError(err);
+    } finally {
+      if (request.current === controller) {
+        setLoading(false);
+        request.current = null;
+      }
     }
-    if (compareCities.length > 0) {
-      setCompareCities(cities => cities.map(c => ({
-        ...c,
-        dataMap: applyLivabilityPreference(c.dataMap, preference)
-      })));
-    }
-  }, [preference]);
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await executeSearch(city);
   };
 
   const executeSearch = async (searchCity: string) => {
-    if (!searchCity.trim()) return;
-
-    setLoading(true);
-    setError(null);
-    setDataMap(null);
-    setCityInfo(null);
-    setSelectedYear('');
-
+    const query = searchCity.trim();
+    if (!query) return;
+    setCity(query);
+    const { controller, signal } = beginSearch('app.loadingCity');
     try {
-      const geo = await geocodeCity(searchCity);
-      geo.name = searchCity;
-      setCityInfo(geo);
-      setCity(searchCity);
-
-      setRecentCities(prev => {
-        const next = [searchCity, ...prev.filter(c => c !== searchCity)].slice(0, 8);
-        localStorage.setItem('recent_cities', JSON.stringify(next));
-        return next;
-      });
-
-      setLoadingMsg(cachedCities.includes(searchCity) ? t('app.loadingCached') : t('app.loadingRemote'));
-      const { data } = await fetchHistoricalData(geo.latitude, geo.longitude, 10);
-
-      if (!cachedCities.includes(searchCity)) {
-        const newCache = [...cachedCities, searchCity];
-        setCachedCities(newCache);
-        localStorage.setItem('cached_cities', JSON.stringify(newCache));
+      const results = await geocodeCities(query, i18n.language, signal);
+      signal.throwIfAborted();
+      if (results.length === 1) await loadCity(results[0], query);
+      else {
+        setCandidateQuery(query);
+        setCandidates(results);
       }
-
-      setDataMap(data);
-      const sortedYears = Object.keys(data).sort((a, b) => Number(b.replace('年', '')) - Number(a.replace('年', '')));
-      if (sortedYears.length > 0) {
-        setSelectedYear(sortedYears[0]);
-      }
-    } catch (err: any) {
-      setError(err.message || t('app.fetchError'));
+    } catch (err) {
+      if (!controller.signal.aborted) reportError(err);
     } finally {
-      setLoading(false);
+      if (request.current === controller) {
+        setLoading(false);
+        request.current = null;
+      }
     }
+  };
+
+  const handleSearch = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await executeSearch(city);
   };
 
   const activeData = dataMap ? dataMap[selectedYear] : null;
@@ -146,29 +175,40 @@ export default function App() {
   const removeRecentCity = (cityName: string) => {
     setRecentCities(prev => {
       const next = prev.filter(recentCity => recentCity !== cityName);
-      localStorage.setItem('recent_cities', JSON.stringify(next));
+      saveLocalValue('recent_cities', JSON.stringify(next));
       return next;
     });
   };
 
+  const currentInCompare = cityInfo !== null && compareCities.some(item => item.id === cityInfo.id);
   const addCurrentCityToCompare = () => {
-    if (!dataMap || !cityInfo) return;
-    if (compareCities.length >= 8) {
-      alert(t('app.maxCompareAlert', { count: 8 }));
-      return;
-    }
-    setCompareCities([...compareCities, {
-      name: cityInfo.name,
-      dataMap: applyLivabilityPreference(dataMap, preference)
+    if (!rawData || !cityInfo || currentInCompare || compareCities.length >= 8) return;
+    setCompareCities(previous => previous.some(item => item.id === cityInfo.id) || previous.length >= 8 ? previous : [...previous, {
+      id: cityInfo.id,
+      name: previous.some(item => item.name === cityInfo.name) ? `${cityInfo.name} (${cityInfo.admin1 || cityInfo.country || cityInfo.id})` : cityInfo.name,
+      location: [cityInfo.admin1, cityInfo.country].filter(Boolean).join(' · '),
+      dataMap: rawData
     }]);
   };
 
-  const removeCompareCity = (cityName: string) => {
-    const updated = compareCities.filter(item => item.name !== cityName);
-    setCompareCities(updated);
-    if (updated.length === 0 && viewMode === 'compare') {
-      setViewMode('daily');
-    }
+  const removeCompareCity = (id: number | undefined) => {
+    setCompareCities(previous => previous.filter(item => item.id !== id));
+  };
+
+  const selectView = (mode: ViewMode) => {
+    setViewMode(mode);
+    window.requestAnimationFrame(() => document.getElementById('analysis-panel')?.focus({ preventScroll: true }));
+  };
+
+  const handleTabKey = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const tabs = Array.from(event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const index = tabs.indexOf(event.currentTarget);
+    const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    tabs[next].click();
+    tabs[next].focus();
+    tabs[next].scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
 
   return (
@@ -254,13 +294,14 @@ export default function App() {
                 aria-label={t('app.cityInputLabel')}
                 placeholder={t('app.cityPlaceholder')}
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
+                autoComplete="off"
+                onChange={(e) => { setCity(e.target.value); setCandidates([]); }}
               />
             </label>
             <button
               type="submit"
               className="btn search-submit"
-              disabled={loading}
+              disabled={loading || !city.trim()}
               aria-label={loading ? t('app.analyzing') : t('app.start')}
               title={loading ? t('app.analyzing') : t('app.start')}
             >
@@ -272,6 +313,7 @@ export default function App() {
             <button
               type="button"
               className="btn btn-secondary icon-button config-button"
+              disabled={loading}
               onClick={() => setShowConfig(true)}
               aria-label={t('app.configTitle')}
               title={t('app.configTitle')}
@@ -307,15 +349,37 @@ export default function App() {
       {error && (
         <div className="status-message status-message--error" role="alert">
           <CircleAlert size={18} aria-hidden="true" />
-          <span>{error}</span>
+          <span>{t(error)}</span>
+          <button type="button" className="text-button" onClick={() => executeSearch(city)}>{t('predictor.retry')}</button>
         </div>
       )}
 
       {loading && (
         <div className="loader" role="status">
           <LoaderCircle className="spinner" size={20} aria-hidden="true" />
-          <span>{loadingMsg}</span>
+          <span>{t(loadingMsg)}</span>
+          <button type="button" className="text-button" onClick={cancelSearch}>{t('common.cancel')}</button>
         </div>
+      )}
+
+      {notice && <p className="search-notice" role="status">{t(notice)}</p>}
+      {candidates.length > 0 && (
+        <section className="city-candidates card" aria-labelledby="candidate-title">
+          <div className="candidate-heading"><h2 id="candidate-title">{t('app.chooseCity', { query: candidateQuery })}</h2><button type="button" className="text-button" onClick={cancelSearch}>{t('common.cancel')}</button></div>
+          <p className="helper-copy">{t('app.chooseCityHelp')}</p>
+          <div className="candidate-list">
+            {candidates.map(candidate => <button type="button" className="candidate-button" key={candidate.id} onClick={() => loadCity(candidate, candidateQuery)}>
+              <MapPin size={18} aria-hidden="true" /><span><strong>{candidate.name}</strong><small>{[candidate.admin2, candidate.admin1, candidate.country].filter(Boolean).join(' · ')}</small></span><small>{candidate.latitude.toFixed(2)}°, {candidate.longitude.toFixed(2)}°</small>
+            </button>)}
+          </div>
+        </section>
+      )}
+      {!dataMap && !loading && !error && candidates.length === 0 && (
+        <section className="welcome-state" aria-labelledby="welcome-title">
+          <h2 id="welcome-title">{t('app.welcomeTitle')}</h2><p>{t('app.welcomeHelp')}</p>
+          <div className="welcome-features"><span><CalendarDays size={17} aria-hidden="true" />{t('app.views.daily')}</span><span><GitCompareArrows size={17} aria-hidden="true" />{t('app.views.compare')}</span><span><PlaneTakeoff size={17} aria-hidden="true" />{t('app.views.predict')}</span></div>
+          <small>{t('app.historyNote')}</small>
+        </section>
       )}
 
       {dataMap && cityInfo && (
@@ -324,14 +388,12 @@ export default function App() {
             <div className="city-title-row">
               <h2 className="city-title">
                 <span className="city-name">{cityInfo.name}</span>
-                <span className="city-country">{cityInfo.country}</span>
+                <span className="city-country">{[cityInfo.admin1, cityInfo.country].filter(Boolean).join(' · ')}</span>
               </h2>
-              {compareCities.findIndex(item => item.name === cityInfo.name) === -1 && (
-                <button type="button" className="compare-add-button" onClick={addCurrentCityToCompare}>
-                  <Plus size={15} strokeWidth={2.4} aria-hidden="true" />
-                  {t('app.addCompare')}
-                </button>
-              )}
+              <button type="button" className="compare-add-button" disabled={currentInCompare || compareCities.length >= 8} onClick={addCurrentCityToCompare}>
+                {currentInCompare ? <Check size={15} aria-hidden="true" /> : <Plus size={15} aria-hidden="true" />}
+                {t(currentInCompare ? 'app.addedCompare' : compareCities.length >= 8 ? 'app.compareFull' : 'app.addCompare')}
+              </button>
             </div>
 
             <div className="view-tabs" role="tablist" aria-label={t('app.viewSelector')}>
@@ -341,6 +403,10 @@ export default function App() {
                   type="button"
                   role="tab"
                   aria-selected={viewMode === key}
+                  aria-controls="analysis-panel"
+                  id={`view-${key}`}
+                  tabIndex={viewMode === key ? 0 : -1}
+                  onKeyDown={handleTabKey}
                   className={`view-tab ${viewMode === key ? 'active' : ''}`}
                   onClick={() => setViewMode(key)}
                 >
@@ -351,6 +417,43 @@ export default function App() {
             </div>
           </div>
 
+      {compareCities.length > 0 && (
+        <aside className="compare-tray">
+          <div className="compare-tray-header">
+            <h3>
+              <GitCompareArrows size={17} aria-hidden="true" />
+              {t('app.compareTray')}
+            </h3>
+            <span>{compareCities.length}/8</span>
+          </div>
+          <div className="compare-tray-list">
+            {compareCities.map(compareCity => (
+              <div key={compareCity.id} className="compare-city-row">
+                <span>{[compareCity.name, compareCity.location].filter(Boolean).join(' · ')}</span>
+                <button
+                  type="button"
+                  onClick={() => removeCompareCity(compareCity.id)}
+                  aria-label={`${t('app.remove')} ${compareCity.name}`}
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+          {compareCities.length < 2 && <p className="helper-copy">{t('app.compareHelp')}</p>}
+          <button
+            type="button"
+            className="btn compare-run-button"
+            disabled={compareCities.length < 2}
+            onClick={() => selectView('compare')}
+          >
+            <GitCompareArrows size={17} aria-hidden="true" />
+            {t('app.startCompare')}
+          </button>
+        </aside>
+      )}
+
+          <section id="analysis-panel" role="tabpanel" aria-labelledby={`view-${viewMode}`} tabIndex={-1} className="analysis-panel">
           {viewMode === 'predict' && (
             <Predictor dataMap={dataMap} cityName={cityInfo.name} />
           )}
@@ -369,6 +472,8 @@ export default function App() {
                         type="button"
                         role="tab"
                         aria-selected={selectedYear === year}
+                        tabIndex={selectedYear === year ? 0 : -1}
+                        onKeyDown={handleTabKey}
                         className={`year-tab ${selectedYear === year ? 'active' : ''}`}
                         key={year}
                         onClick={() => setSelectedYear(year)}
@@ -379,6 +484,8 @@ export default function App() {
                   </div>
                 </div>
 
+                {activeData && <p className="coverage-note">{t('app.coverage', { year: formatYearLabel(selectedYear, i18n.language), count: activeData.length, start: activeData[0]?.date, end: activeData.at(-1)?.date })}{activeData.length < 365 && <strong>{t('app.partialYear')}</strong>}</p>}
+                {activeData?.some(day => day.pm25Avg == null) && <p className="helper-copy air-data-note" role="status">{t('app.missingAir', { count: activeData.filter(day => day.pm25Avg == null).length })}</p>}
                 <div className="stats-layout">
                   <section className="stat-group season-stat-group">
                     <h3 className="stat-heading">
@@ -411,7 +518,7 @@ export default function App() {
                     <div className="livability-layout">
                       <div className="livability-column">
                         <div className="metric-tile metric-tile--good metric-tile--summary">
-                          <span>{t('app.livablePeriod')}</span>
+                          <span>{t(activeData && activeData.length < 365 ? 'app.observedLivablePeriod' : 'app.livablePeriod')}</span>
                           <strong>{livableStats.level1 + livableStats.level2}<small>{t('common.dayUnit')}</small></strong>
                         </div>
                         <div className="metric-pair">
@@ -428,7 +535,7 @@ export default function App() {
 
                       <div className="livability-column">
                         <div className="metric-tile metric-tile--bad metric-tile--summary">
-                          <span>{t('app.unlivablePeriod')}</span>
+                          <span>{t(activeData && activeData.length < 365 ? 'app.observedUnlivablePeriod' : 'app.unlivablePeriod')}</span>
                           <strong>{livableStats.level3 + livableStats.level4}<small>{t('common.dayUnit')}</small></strong>
                         </div>
                         <div className="metric-pair">
@@ -464,110 +571,14 @@ export default function App() {
           )}
 
           {viewMode === 'compare' && (
-            <CompareDashboard cities={compareCities} />
+            <CompareDashboard cities={adjustedCompareCities} />
           )}
+          </section>
         </main>
       )}
 
-      {compareCities.length > 0 && (
-        <aside className="compare-tray">
-          <div className="compare-tray-header">
-            <h3>
-              <GitCompareArrows size={17} aria-hidden="true" />
-              {t('app.compareTray')}
-            </h3>
-            <span>{compareCities.length}/8</span>
-          </div>
-          <div className="compare-tray-list">
-            {compareCities.map(compareCity => (
-              <div key={compareCity.name} className="compare-city-row">
-                <span>{compareCity.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeCompareCity(compareCity.name)}
-                  aria-label={`${t('app.remove')} ${compareCity.name}`}
-                >
-                  <X size={14} aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="btn compare-run-button"
-            onClick={() => {
-              if (compareCities.length < 2) {
-                alert(t('app.minCompareAlert', { count: 2 }));
-                return;
-              }
-              setViewMode('compare');
-            }}
-          >
-            <GitCompareArrows size={17} aria-hidden="true" />
-            {t('app.startCompare')}
-          </button>
-        </aside>
-      )}
+      {showConfig && <SettingsDialog cachedCities={cachedCities} onClose={() => setShowConfig(false)} onClear={() => { setCachedCities([]); saveLocalValue('cached_cities', null); }} />}
 
-      {showConfig && (
-        <div className="modal-overlay" onClick={() => setShowConfig(false)}>
-          <section
-            className="modal card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="settings-title"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <h2 id="settings-title">
-                <Settings size={20} aria-hidden="true" />
-                {t('app.settingsTitle')}
-              </h2>
-              <button
-                type="button"
-                className="icon-button modal-close"
-                onClick={() => setShowConfig(false)}
-                aria-label={t('common.close')}
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
-            </div>
-
-            <div className="form-group cache-group">
-              <div className="form-label">
-                <Database size={16} aria-hidden="true" />
-                <span>{t('app.cachedCities', { count: cachedCities.length })}</span>
-              </div>
-              <div className="cached-city-list">
-                {cachedCities.length === 0 ? (
-                  <span className="empty-state">{t('common.noData')}</span>
-                ) : (
-                  cachedCities.map(cachedCity => (
-                    <span key={cachedCity} className="cached-city-chip">{cachedCity}</span>
-                  ))
-                )}
-              </div>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={async () => {
-                  await clearCache();
-                  setCachedCities([]);
-                  localStorage.removeItem('cached_cities');
-                  alert(t('app.clearCacheDone'));
-                }}
-              >
-                <Trash2 size={17} aria-hidden="true" />
-                {t('app.clearCache')}
-              </button>
-            </div>
-
-            <div className="form-actions">
-              <button type="button" className="btn" onClick={() => setShowConfig(false)}>{t('common.close')}</button>
-            </div>
-          </section>
-        </div>
-      )}
     </div>
   );
 }

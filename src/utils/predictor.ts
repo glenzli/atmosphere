@@ -43,14 +43,10 @@ export function generatePrediction(
 
     for (const d of days) {
       const dateVal = parseMMDD(d.date); // d.date is already "MM-DD"
-      // 跨年处理暂不考虑，只考虑同一年内的普通范围
-      let inRange = false;
-      if (startVal <= endVal) {
-        inRange = dateVal >= startVal && dateVal <= endVal;
-      } else {
-        // 跨年，如 12-25 到 01-05
-        inRange = dateVal >= startVal || dateVal <= endVal;
-      }
+      // A cross-year range includes the end and beginning of each historical year.
+      const inRange = startVal <= endVal
+        ? dateVal >= startVal && dateVal <= endVal
+        : dateVal >= startVal || dateVal <= endVal;
 
       if (inRange) {
         allDays.push({ ...d, weight: finalWeight });
@@ -64,7 +60,7 @@ export function generatePrediction(
   // 排序辅助函数
   const getPercentile = (arr: any[], key: string, p: number) => {
     const sorted = [...arr].sort((a, b) => a[key] - b[key]);
-    let targetWeight = totalWeight * p;
+    const targetWeight = totalWeight * p;
     let currentWeight = 0;
     for (const item of sorted) {
       currentWeight += item.weight;
@@ -97,18 +93,25 @@ export function generatePrediction(
   let precipSum = 0;
   let totalPrecipVolume = 0;
   let totalPm25 = 0;
+  let pm25Weight = 0;
+  let pm25SampleDays = 0;
 
   for (const d of allDays) {
     if (d.precipAvg >= 1.0) precipSum += d.weight;
     if (d.precipAvg >= 50) rainWeight += d.weight;
-    if (d.windMax >= 62) typhoonWeight += d.weight;
+    if ((d.windAvg ?? d.windMax ?? 0) >= 62) typhoonWeight += d.weight;
     if (d.tMax >= 35 || d.twMax >= 27) heatWeight += d.weight;
     if (d.twMax >= 26) heatStressWeight += d.weight;
     if (d.tAvg <= 5 || d.tMin <= 0) coldWeight += d.weight;
-    if (d.pm25Avg >= 75) smogWeight += d.weight;
-    if (d.pm25Avg >= 150) severeSmogWeight += d.weight;
+
     totalPrecipVolume += d.precipAvg * d.weight;
-    totalPm25 += d.pm25Avg * d.weight;
+    if (typeof d.pm25Avg === 'number' && Number.isFinite(d.pm25Avg) && d.pm25Avg >= 0) {
+      if (d.pm25Avg >= 75) smogWeight += d.weight;
+      if (d.pm25Avg >= 150) severeSmogWeight += d.weight;
+      totalPm25 += d.pm25Avg * d.weight;
+      pm25Weight += d.weight;
+      pm25SampleDays++;
+    }
   }
 
   const expectedDailyPrecip = totalPrecipVolume / totalWeight;
@@ -126,14 +129,16 @@ export function generatePrediction(
     dewPointRange: [Math.round(tdLow), Math.round(tdHigh)],
     precipExpected: Number(expectedDailyPrecip.toFixed(1)),
     precipScale,
-    pm25Expected: Math.round(totalPm25 / totalWeight),
+    pm25Expected: pm25Weight ? Math.round(totalPm25 / pm25Weight) : null,
+    pm25SampleDays,
+    sampleDays: allDays.length,
     rainProb: Math.round((precipSum / totalWeight) * 100),
     severeRainProb: Math.round((rainWeight / totalWeight) * 100),
     typhoonProb: Math.round((typhoonWeight / totalWeight) * 100),
     heatProb: Math.round((heatWeight / totalWeight) * 100),
     heatStressProb: Math.round((heatStressWeight / totalWeight) * 100),
     coldProb: Math.round((coldWeight / totalWeight) * 100),
-    smogProb: Math.round((smogWeight / totalWeight) * 100),
-    severeSmogProb: Math.round((severeSmogWeight / totalWeight) * 100),
+    smogProb: pm25Weight ? Math.round((smogWeight / pm25Weight) * 100) : null,
+    severeSmogProb: pm25Weight ? Math.round((severeSmogWeight / pm25Weight) * 100) : null,
   };
 }
