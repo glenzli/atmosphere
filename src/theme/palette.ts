@@ -28,6 +28,12 @@ export const palette = {
   wetBulb: '#C58B43',
   air: '#8A6E9C',
 
+  // Text tones remain readable on the pale metric cards; chart colors stay unchanged.
+  warmText: '#8F621C',
+  rainText: '#35658B',
+  airText: '#755985',
+  alertText: '#983C37',
+
   heatWarning: '#A94E49',
   coldWarning: '#3F5F99',
   rainstorm: '#3F79AD',
