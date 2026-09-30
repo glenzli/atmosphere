@@ -111,8 +111,8 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
       title: [
         { text: t('charts.compare.livability'), left: isMobile ? '50%' : '25%', top: isMobile ? '2%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } },
         { text: t('charts.compare.seasons'), left: isMobile ? '50%' : '75%', top: isMobile ? '27%' : '5%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } },
-        { text: isMobile ? t('charts.compare.extremesShort') : t('charts.compare.extremes'), left: isMobile ? '50%' : '25%', top: isMobile ? '52%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } },
-        { text: isMobile ? t('charts.compare.sensitiveShort') : t('charts.compare.sensitive'), left: isMobile ? '50%' : '75%', top: isMobile ? '76%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } }
+        { text: t('charts.compare.extremesShort'), left: isMobile ? '50%' : '25%', top: isMobile ? '52%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } },
+        { text: t('charts.compare.sensitiveShort'), left: isMobile ? '50%' : '75%', top: isMobile ? '76%' : '55%', textAlign: 'center', textStyle: { fontSize: isMobile ? 12 : 14, color: palette.heading } }
       ],
       tooltip: {
         trigger: 'axis',
@@ -141,7 +141,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
       ],
       radar: {
         center: isMobile ? ['50%', '90%'] : ['75%', '80%'],
-        radius: isMobile ? 60 : '30%',
+        radius: isMobile ? 60 : '25%',
         indicator: [
           { name: labels.huinan, max: maxHuinan },
           { name: labels.rainy, max: maxRainy },
@@ -149,7 +149,7 @@ export const CompareDashboard: React.FC<Props> = ({ cities }) => {
           { name: labels.dry, max: maxDry },
           ...(showSmog ? [{ name: labels.smog, max: maxSmog }] : [])
         ],
-        axisName: { formatter: (name: string) => isMobile ? name.replace(/(.{1,12})(?:\s|$)/g, '$1\n').trim() : name, color: palette.muted, fontSize: isMobile ? 10 : 12, ...(isMobile ? { width: 84, overflow: 'break' as const, lineHeight: 14 } : {}) },
+        axisName: { formatter: (name: string) => isMobile ? name.replace(/(.{1,12})(?:\s|$)/g, '$1\n').trim() : name, color: palette.muted, fontSize: isMobile ? 10 : 12, ...(isMobile ? { width: 84, overflow: 'break' as const, lineHeight: 14 } : { width: 96, overflow: 'break' as const, lineHeight: 16 }) },
         splitLine: { lineStyle: { color: palette.axis } },
         splitArea: { areaStyle: { color: [palette.surfaceSubtle, palette.brandSoft] } }
       },
